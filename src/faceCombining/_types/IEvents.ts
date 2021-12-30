@@ -6,75 +6,62 @@ export type IEvent<D> =
     | ILeftContinueEvent<D>
     | IRightContinueEvent<D>
     | ISplitEvent<D>
-    | IStopEvent
-    | IMergeEvent
+    | IStopEvent<D>
+    | IMergeEvent<D>
     | ICrossEvent;
+
+export type IPolygonEventBase<D> = {
+    /** The start point of a interval */
+    point: IPoint;
+    /** The associated data of the face */
+    data: D;
+};
 
 export type IStartEvent<D> = {
     /** The event type */
     type: "start";
-    /** The start point of a interval */
-    point: IPoint;
     /** The next point above that starts the left boundary */
     left: IPoint;
     /** The next point above that starts the right boundary*/
     right: IPoint;
-    /** The associated data of the face */
-    data: D;
-};
+} & IPolygonEventBase<D>;
 
 export type ILeftContinueEvent<D> = {
     /** The event type */
     type: "leftContinue";
-    /** The start point of the next line segment */
-    point: IPoint;
     /** The previous point of the line that's continued */
     prev: IPoint;
     /** The end point of the next line segment */
     next: IPoint;
-    /** The associated data of the face */
-    data: D;
-};
+} & IPolygonEventBase<D>;
 
 export type IRightContinueEvent<D> = {
     /** The event type */
     type: "rightContinue";
-    /** The start point of the next line segment */
-    point: IPoint;
     /** The previous point of the line that's continued */
     prev: IPoint;
     /** The end point of the next line segment */
     next: IPoint;
-    /** The associated data of the face */
-    data: D;
-};
+} & IPolygonEventBase<D>;
 
-export type IStopEvent = {
+export type IStopEvent<D> = {
     /** The event type */
     type: "stop";
-    /** The end point of the interval */
-    point: IPoint;
-};
+} & IPolygonEventBase<D>;
 
 export type ISplitEvent<D> = {
     /** The event type */
     type: "split";
-    /** The point at which the interval splits into two */
-    point: IPoint;
     /** The next point above that starts the new left boundary */
     left: IPoint;
     /** The next point above that starts the new right boundary*/
     right: IPoint;
-    /** The associated data of the face */
-    data: D;
-};
+} & IPolygonEventBase<D>;
 
-export type IMergeEvent = {
+export type IMergeEvent<D> = {
     /** The event type */
     type: "merge";
-    /** The point at which the intervals merge together */
-    point: IPoint;
-};
+} & IPolygonEventBase<D>;
 
 export type ICrossEvent = {
     /** The event type */

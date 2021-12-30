@@ -8,7 +8,16 @@ import {getSideOfLine} from "../utils/getSideOfLine";
 import {getSideOfPoint} from "../utils/getSideOfPoint";
 import {Side} from "../utils/Side";
 import {getFaceEvents} from "./getFaceEvents";
-import {ICrossEvent, IEvent, ILeftContinueEvent, IStartEvent} from "./_types/IEvents";
+import {
+    ICrossEvent,
+    IEvent,
+    ILeftContinueEvent,
+    IMergeEvent,
+    IRightContinueEvent,
+    ISplitEvent,
+    IStartEvent,
+    IStopEvent,
+} from "./_types/IEvents";
 import {IBoundary, IInterval} from "./_types/IInterval";
 import {IMonotonePolygonSection} from "./_types/IMonotonePolygonSection";
 
@@ -85,19 +94,20 @@ export function combineFaces<D>(faces: IFace<D>[]): IFace<D[]>[] {
     let event: IEvent<D> | undefined;
     while ((event = events.getMin())) {
         events.delete(event);
-        if (event.type == "start") handleStart(event, scanLine, startSections, events);
-        else if (event.type == "leftContinue") handleLeftContinue();
+        if (event.type == "start")
+            handleStartAndSplit(event, scanLine, startSections, events);
+        else if (event.type == "leftContinue") handleContinue();
     }
 }
 
 /**
  * Returns a function that can be used to query the scanline for a given segment
- * @param start The point to be queried on the scanline
- * @param end The end point to be queried
+ * @param segment The segment to be found
  * @returns The function to query the scanline with
  */
-const findInterval: <D>(start: IPoint, end: IPoint) => (i: IInterval<D>) => -1 | 0 | 1 =
-    (start, end) => i => {
+const findInterval: <D>(segment: ISegment) => (i: IInterval<D>) => -1 | 0 | 1 =
+    ({start, end}) =>
+    i => {
         let onLeft = false; // Whether the start point lies on the left of the interval
         let onRight = false; // Whether the start point lies on the right of the interval
         if (!i.left && i.right) {
@@ -167,24 +177,82 @@ function getIntersectionPoint(a: ISegment, b: ISegment): IPoint {
 }
 
 /**
- * Handles the start event of a polygon
- * @param event The start event
+ * Checks what side a is on in respect to b
+ * @param a The line segment to get the side of
+ * @param b The segment to get the side relative to
+ * @returns The side of line segment a (based on the start point of `a` in case of crossing)
+ */
+function getLineSideOfLine(a: ISegment, b: ISegment): Side {
+    const startSide = getSideOfLine(b, a.start);
+    if (startSide != Side.on) return startSide;
+    const endSide = getSideOfLine(b, a.end);
+    return endSide;
+}
+
+/**
+ * Sorts the given boundaries from left to right
+ * @param boundaries The boundaries to be sorted
+ * @returns The sorted boundaries
+ */
+function sortBoundaries<D>(boundaries: IBoundary<D>[]): IBoundary<D>[] {
+    const sorted = [...boundaries];
+    sorted.sort(getLineSideOfLine);
+    return sorted;
+}
+
+/**
+ * Augments the given data as would happen when crossing its boundary from left to right with the given data
+ * @param data The data to be augment
+ * @param boundary THe boundary to be crossed
+ * @returns The augmented data
+ */
+function augmentData<D>(data: D[], boundary: IBoundary<D>): D[] {
+    if (boundary.side == "left") return [...data, boundary.data];
+    else return data.filter(el => el != boundary.data);
+}
+
+/**
+ * Handles the start/split event of a polygon
+ * @param events The start/split events at this point (shares same x and y coordinates)
  * @param scanLine The scanline
  * @param output The output to accumulate start pieces of output polygons into
- * @param events The event queue to add new possible future events into
+ * @param eventQueue The event queue to add new possible future events into
  */
-function handleStart<D>(
-    event: IStartEvent<D>,
+function handleStartAndSplit<D>(
+    events: (IStartEvent<D> | ISplitEvent<D>)[],
     scanLine: BalancedSearchTree<IInterval<D>>,
     output: Set<IMonotonePolygonSection<D>>,
-    events: BalancedSearchTree<IEvent<D>>
+    eventQueue: BalancedSearchTree<IEvent<D>>
 ): void {
-    const intervals = scanLine.findRange(
-        findInterval(event.point, event.left),
-        findInterval(event.point, event.right)
+    const point = events[0].point; // Point is the same for all events
+    const eventBoundaries = events.flatMap<IBoundary<D>>( // 2+ boundaries
+        ({point, left, right, type, data}) =>
+            type == "start"
+                ? [
+                      {start: point, end: left, side: "left", data},
+                      {start: point, end: right, side: "right", data},
+                  ]
+                : [
+                      {start: point, end: left, side: "right", data},
+                      {start: point, end: right, side: "left", data},
+                  ]
     );
-    if (intervals.length == 0)
-        throw new Error(`Reached unreachable state 1: ${event.point}`);
+    const sortedEventBoundaries = sortBoundaries(eventBoundaries);
+
+    const startBoundary = sortedEventBoundaries[0];
+    const endBoundary = sortedEventBoundaries[sortedEventBoundaries.length - 1];
+
+    const intervals = scanLine.findRange(
+        findInterval(startBoundary),
+        findInterval(endBoundary)
+    );
+
+    if (intervals.length < 1)
+        throw new Error(
+            `Reached unreachable state 1: ${JSON.stringify(
+                eventBoundaries.map(({start, end}) => ({start, end}))
+            )}`
+        );
 
     for (let interval of intervals) scanLine.delete(interval);
 
@@ -193,39 +261,27 @@ function handleStart<D>(
     const rightInterval = intervals[intervals.length - 1];
 
     // Create the new intervals outside the started polygon
-    const newLeftBoundary: IBoundary<D> = {
-        start: event.point,
-        end: event.left,
-        data: event.data,
-        side: "left",
-    };
     const {shape: lis} = leftInterval;
     const {left: lsl, right: lsr} = lis;
     const newLeftInterval: IInterval<D> = {
         ...leftInterval,
-        right: newLeftBoundary,
+        right: startBoundary,
         shape: {
             data: leftInterval.data,
             left: lsl.length == 0 ? [] : [lsl[lsl.length - 1]],
-            right: [event.point],
+            right: [point],
             bottomLeft: lis,
         },
     };
 
-    const newRightBoundary: IBoundary<D> = {
-        start: event.point,
-        end: event.right,
-        data: event.data,
-        side: "right",
-    };
     const {shape: ris} = rightInterval;
     const {left: rsl, right: rsr} = ris;
     const newRightInterval: IInterval<D> = {
         ...rightInterval,
-        left: newRightBoundary,
+        left: endBoundary,
         shape: {
             data: rightInterval.data,
-            left: [event.point],
+            left: [point],
             right: rsr.length == 0 ? [] : [rsr[rsr.length - 1]],
             bottomRight: ris,
         },
@@ -236,115 +292,205 @@ function handleStart<D>(
     scanLine.insert(newLeftInterval);
     scanLine.insert(newRightInterval);
 
-    // Create the new intervals inside the started polygon
-    if (leftInterval == rightInterval) {
-        const newData = [...leftInterval.data, event.data];
-        const newMiddleInterval: IInterval<D> = {
-            data: newData,
-            left: newLeftBoundary,
-            right: newRightBoundary,
-            shape: {
-                data: newData,
-                left: [event.point],
-                right: [event.point],
-            },
-        };
-        scanLine.insert(newMiddleInterval);
-        output.add(newMiddleInterval.shape);
-    } else {
-        const newMiddleLeftData = [...leftInterval.data, event.data];
-        const {shape: lis} = leftInterval;
-        const {left: lsl, right: lsr} = lis;
-        const newMiddleLeftInterval: IInterval<D> = {
-            data: newMiddleLeftData,
-            left: newLeftBoundary,
-            right: leftInterval.right,
-            shape: {
-                data: newMiddleLeftData,
-                left: [event.point],
-                right: lsr.length == 0 ? [] : [lsr[lsr.length - 1]],
-            },
-        };
-        output.add(newMiddleLeftInterval.shape);
-        scanLine.insert(newMiddleLeftInterval);
+    // Create the new intervals inside the started polygons
+    const endIntervals = intervals.slice(1);
+    const middleIntervals = endIntervals.slice(0, -1);
+    middleIntervals.forEach(({shape}) => output.delete(shape)); // These shapes must have started in this point, but are replaced because of this event
 
-        const newMiddleRightData = [...rightInterval.data, event.data];
-        const {shape: ris} = leftInterval;
-        const {left: rsl, right: rsr} = ris;
-        const newMiddleRightInterval: IInterval<D> = {
-            data: newMiddleRightData,
-            left: leftInterval.left,
-            right: newRightBoundary,
-            shape: {
-                data: newMiddleRightData,
-                left: rsl.length == 0 ? [] : [rsl[rsl.length - 1]],
-                right: [event.point],
-            },
+    const innerCrossedBoundaries = endIntervals
+        .map(({left}) => left)
+        .filter((b): b is IBoundary<D> => !!b);
+    const allInnerBoundaries = [
+        ...sortedEventBoundaries.slice(1), // Only skip the first boundary
+        ...innerCrossedBoundaries,
+    ];
+    const allSortedInnerBoundaries = sortBoundaries(allInnerBoundaries);
+
+    let prevBoundary = startBoundary;
+    let data = leftInterval.data;
+    for (let boundary of allSortedInnerBoundaries) {
+        data = augmentData(data, prevBoundary);
+
+        const newShape: IMonotonePolygonSection<D> = {
+            data,
+            left: [point],
+            right: [point],
         };
-        output.add(newMiddleRightInterval.shape);
-        scanLine.insert(newMiddleRightInterval);
+        const newInterval: IInterval<D> = {
+            left: prevBoundary,
+            right: boundary,
+            data,
+            shape: newShape,
+        };
+        output.add(newShape);
+        scanLine.insert(newInterval);
 
-        // Update the data of all intermediate intervals
-        const middleIntervals = intervals.slice(1, -1);
-        for (let interval of middleIntervals) {
-            const newData = [...interval.data, event.data];
-            const newInterval: IInterval<D> = {
-                ...interval,
-                data: newData,
-                shape: {
-                    ...interval.shape,
-                    data: newData,
-                },
-            };
-
-            output.delete(interval.shape);
-            output.add(newInterval.shape);
-            scanLine.insert(newInterval);
-        }
+        prevBoundary = boundary;
     }
 
     // Check for line intersections, and note that it's impossible to intersect any of the internal boundaries such that they don't have to be checked
-    if (leftInterval.left && doesIntersect(leftInterval.left, newLeftBoundary, true)) {
-        const intersect = getIntersectionPoint(leftInterval.left, newLeftBoundary);
+    if (leftInterval.left && doesIntersect(leftInterval.left, startBoundary, true)) {
+        const intersect = getIntersectionPoint(leftInterval.left, startBoundary);
         const crossEvent: ICrossEvent = {
             type: "cross",
             left: leftInterval.left.start,
-            right: newLeftBoundary.start,
+            right: startBoundary.start,
             point: intersect,
         };
-        events.insert(crossEvent);
+        eventQueue.insert(crossEvent);
     }
-    if (
-        rightInterval.right &&
-        doesIntersect(newRightBoundary, rightInterval.right, true)
-    ) {
-        const intersect = getIntersectionPoint(newRightBoundary, rightInterval.right);
+    if (rightInterval.right && doesIntersect(endBoundary, rightInterval.right, true)) {
+        const intersect = getIntersectionPoint(endBoundary, rightInterval.right);
         const crossEvent: ICrossEvent = {
             type: "cross",
-            left: newRightBoundary.start,
+            left: endBoundary.start,
             right: rightInterval.right.start,
             point: intersect,
         };
-        events.insert(crossEvent);
+        eventQueue.insert(crossEvent);
     }
 }
 
 /**
- * Handles the left edge continue event
- * @param event The left continue event
+ * Handles the edge continue events
+ * @param events The right/left continue events at this point (shares same x and y coordinates)
  * @param scanLine The scanline
+ * @param output The output to accumulate start pieces of output polygons into
+ * @param eventQueue The event queue to add new possible future events into
  */
-function handleLeftContinue<D>(
-    event: ILeftContinueEvent<D>,
+function handleContinue<D>(
+    events: (ILeftContinueEvent<D> | IRightContinueEvent<D>)[],
     scanLine: BalancedSearchTree<IInterval<D>>,
-    events: BalancedSearchTree<IEvent<D>>
+    output: Set<IMonotonePolygonSection<D>>,
+    eventQueue: BalancedSearchTree<IEvent<D>>
 ): void {
-    const sourceQuery = findInterval(event.prev, event.point);
-    const intervals = scanLine.findRange(sourceQuery, sourceQuery);
+    const point = events[0].point; // Point is the same for all events
+
+    // Retrieve the old boundaries and intervals
+    const eventOldBoundaries = events.map<IBoundary<D>>( // 1+ boundaries
+        ({point, prev, next, type, data}) => ({
+            start: prev,
+            end: point,
+            side: type == "leftContinue" ? "left" : "right",
+            data,
+        })
+    );
+    const sortedEventOldBoundaries = sortBoundaries(eventOldBoundaries);
+    const startOldBoundary = sortedEventOldBoundaries[0];
+    const endOldBoundary = sortedEventOldBoundaries[sortedEventOldBoundaries.length - 1];
+
+    const intervals = scanLine.findRange(
+        findInterval(startOldBoundary),
+        findInterval(endOldBoundary)
+    );
 
     if (intervals.length < 2)
-        throw new Error(`Reached unreachable state 2: ${(event.prev, event.point)}`);
+        throw new Error(
+            `Reached unreachable state 2: ${JSON.stringify(
+                sortedEventOldBoundaries.map(({start, end}) => ({start, end}))
+            )}`
+        );
 
+    // Remove the old inner intervals
+    const oldInnerIntervals = intervals.slice(1, -1);
+    for (let interval of oldInnerIntervals) {
+        interval.shape.left.push(point);
+        interval.shape.right.push(point);
+        scanLine.delete(interval);
+    }
+
+    // Retrieve the new boundaries
+    const eventNewBoundaries = events.map<IBoundary<D>>( // 1+ boundaries
+        ({point, prev, next, type, data}) => ({
+            start: point,
+            end: next,
+            side: type == "leftContinue" ? "left" : "right",
+            data,
+        })
+    );
+    const sortedEventNewBoundaries = sortBoundaries(eventNewBoundaries);
+    const startNewBoundary = sortedEventNewBoundaries[0];
+    const endNewBoundary = sortedEventNewBoundaries[sortedEventNewBoundaries.length - 1];
+
+    // Update the side intervals
     const leftInterval = intervals[0];
     const rightInterval = intervals[intervals.length - 1];
+
+    if (leftInterval.right) leftInterval.shape.right.push(leftInterval.right.end);
+    leftInterval.right = startNewBoundary;
+
+    if (rightInterval.left) rightInterval.shape.left.push(rightInterval.left.end);
+    leftInterval.left = endNewBoundary;
+
+    // Create the new middle intervals
+    const sortedInnerBoundaries = sortedEventNewBoundaries.slice(1);
+
+    let prevBoundary = startNewBoundary;
+    let data = leftInterval.data;
+    for (let boundary of sortedInnerBoundaries) {
+        data = augmentData(data, prevBoundary);
+
+        const newShape: IMonotonePolygonSection<D> = {
+            data,
+            left: [point],
+            right: [point],
+        };
+        const newInterval: IInterval<D> = {
+            left: prevBoundary,
+            right: boundary,
+            data,
+            shape: newShape,
+        };
+        output.add(newShape);
+        scanLine.insert(newInterval);
+
+        prevBoundary = boundary;
+    }
+
+    // Check for line intersections, and note that it's impossible to intersect any of the internal boundaries such that they don't have to be checked
+    if (leftInterval.left && doesIntersect(leftInterval.left, startNewBoundary, true)) {
+        const intersect = getIntersectionPoint(leftInterval.left, startNewBoundary);
+        const crossEvent: ICrossEvent = {
+            type: "cross",
+            left: leftInterval.left.start,
+            right: startNewBoundary.start,
+            point: intersect,
+        };
+        eventQueue.insert(crossEvent);
+    }
+    if (rightInterval.right && doesIntersect(endNewBoundary, rightInterval.right, true)) {
+        const intersect = getIntersectionPoint(endNewBoundary, rightInterval.right);
+        const crossEvent: ICrossEvent = {
+            type: "cross",
+            left: endNewBoundary.start,
+            right: rightInterval.right.start,
+            point: intersect,
+        };
+        eventQueue.insert(crossEvent);
+    }
+}
+
+/**
+ * Handles the stop/merge events of a polygon
+ * @param events The stop/merge events at this point (shares same x and y coordinates)
+ * @param scanLine The scanline
+ */
+function handleStopAndMerge<D>(
+    events: (IStopEvent<D> | IMergeEvent<D>)[],
+    scanLine: BalancedSearchTree<IInterval<D>>
+): void {
+    const point = events[0].point; // Point is the same for all events
+
+    const query = findInterval({start: point, end: point});
+    const intervals = scanLine.findRange(query, query);
+    if (intervals.length < 3)
+        throw new Error(`Reached unreachable state 3: ${JSON.stringify(point)}`);
+
+    for (let interval of intervals) scanLine.delete(interval);
+
+    // Merge the outer intervals together
+    const leftInterval = intervals[0];
+    const rightInterval = intervals[intervals.length - 1];
+    // const newInterval: IInterval;
+    // TODO:
 }

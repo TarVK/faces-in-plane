@@ -53,6 +53,7 @@ export function getFaceEvents<D>(face: IFace<D>): IEvent<D>[] {
             event = {
                 type,
                 point,
+                data,
             };
         else if (type == "split")
             event = {
@@ -66,6 +67,7 @@ export function getFaceEvents<D>(face: IFace<D>): IEvent<D>[] {
             event = {
                 type,
                 point,
+                data,
             };
         else if (type == "leftContinue")
             event = {
