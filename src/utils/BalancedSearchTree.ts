@@ -135,6 +135,14 @@ export class BalancedSearchTree<D> {
         this.root?.getAll(output);
         return output;
     }
+
+    /**
+     * A list getter for easier console debugging
+     * @returns The BST's sorted contents
+     */
+    protected get list(): D[] {
+        return this.getAll();
+    }
 }
 
 export class BSTNode<D> {

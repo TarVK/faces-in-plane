@@ -28,37 +28,15 @@ import {IMonotonePolygonSection} from "./_types/IMonotonePolygonSection";
  * @returns The combined faces
  */
 export function combineFaces<F extends IFace<any>>(faces: F[]): IFace<F[]>[] {
-    // Sort events increasingly, lexicographically on y, then x coordinates, then prioritize stop over start.
-    const eventPrios = {
-        // Lower prio means handled earlier
-        stop: 0,
-        merge: 0,
-        cross: 1,
-        leftContinue: 2,
-        rightContinue: 2,
-        start: 3,
-        split: 3,
-    };
+    // Sort events increasingly, lexicographically on y, then x coordinates, then prioritize cross events.
     const events = new BalancedSearchTree<IEvent<F>>((pa, pb) => {
         const {type: ta, point: a} = pa,
             {type: tb, point: b} = pb;
         if (a.y != b.y) return a.y - b.y;
         if (a.x != b.x) return a.x - b.x;
 
-        const aPrio = eventPrios[ta];
-        const bPrio = eventPrios[tb];
-        if (aPrio != bPrio) {
-            if (aPrio < bPrio) return -1;
-            else return 1;
-        } else if (
-            (pa.type == "start" || pa.type == "split") &&
-            (pb.type == "start" || pb.type == "split")
-        ) {
-            // Sort start/splits from left to right
-            const lineSide = getSideOfLine({start: a, end: pb.left}, pa.left);
-            if (lineSide == Side.left) return -1;
-            else if (lineSide == Side.right) return 1;
-        }
+        if (ta == "cross" && tb != "cross") return -1;
+        if (ta != "cross" && tb == "cross") return 1;
         return 0;
     });
 
@@ -70,6 +48,7 @@ export function combineFaces<F extends IFace<any>>(faces: F[]): IFace<F[]>[] {
 
     // Perform the scanline sweep
     const scanLine = new BalancedSearchTree<IInterval<F>>(({left: a}, {left: b}) => {
+        if (!a && !b) return 0; // There is only 1 interval with no right boundary on any scanline
         if (!a) return -1;
         if (!b) return 1;
 
@@ -94,57 +73,55 @@ export function combineFaces<F extends IFace<any>>(faces: F[]): IFace<F[]>[] {
     scanLine.insert(outerInterval);
     const startSections = new Set<IMonotonePolygonSection<F>>();
 
-    let event: IEvent<F> | undefined = events.getMin();
-    if (!event) return [];
-    events.delete(event);
-
-    let point: IPoint | undefined = event.point;
-    let eventsAtPoint: Exclude<IEvent<F>, ICrossEvent<F>>[] = [
-        event as Exclude<IEvent<F>, ICrossEvent<F>>,
-    ]; // First event can't be a cross event, since no such event can be generated yet
-
+    let event: IEvent<F> | undefined;
     while ((event = events.getMin())) {
         events.delete(event);
         if (event.type == "cross") handleCrossEvent(event, scanLine, events);
         else {
-            if (!pointEquals(point, event.point)) {
-                handleEvents(eventsAtPoint, scanLine, startSections, events);
-                eventsAtPoint = [event];
-                point = event.point;
+            const point: IPoint | undefined = event.point;
+            const eventsAtPoint: Exclude<IEvent<F>, ICrossEvent<F>>[] = [event];
+            let nextEvent: IEvent<F> | undefined;
+            while ((nextEvent = events.getMin())) {
+                if (nextEvent.type == "cross") break;
+                if (!pointEquals(nextEvent.point, point)) break;
+                events.delete(nextEvent);
+                eventsAtPoint.push(nextEvent);
             }
-            eventsAtPoint.push(event);
+
+            handleEvents(eventsAtPoint, scanLine, startSections, events);
         }
     }
-    if (eventsAtPoint.length > 0)
-        handleEvents(eventsAtPoint, scanLine, startSections, events);
 
+    console.log([...startSections]);
     return generateFaces(startSections);
 }
 
 /**
  * Returns a function that can be used to query the scanline for a given segment
  * @param segment The segment to be found
+ * @param steer Whether to steer the query to the left, to the right right, or onto the interval
  * @returns The function to query the scanline with
  */
 const findInterval: <F extends IFace<any>>(
-    segment: ISegment
+    segment: ISegment,
+    steer?: Side
 ) => (i: IInterval<F>) => -1 | 0 | 1 =
-    ({start, end}) =>
+    ({start, end}, steer = Side.on) =>
     i => {
         let onLeft = false; // Whether the start point lies on the left of the interval
         let onRight = false; // Whether the start point lies on the right of the interval
         if (!i.left && i.right) {
             const side = getSideOfLine(i.right, start);
-            if (side == Side.left) return 0;
+            if (side == Side.left) return steer;
             if (side == Side.right) return 1;
             onRight = true;
         } else if (i.left && !i.right) {
             const side = getSideOfLine(i.left, start);
             if (side == Side.left) return -1;
-            if (side == Side.right) return 0;
+            if (side == Side.right) return steer;
             onLeft = true;
         } else if (!i.left || !i.right) {
-            return 0; // This case shouldn't be reachable
+            return steer; // This case shouldn't be reachable
         } else {
             const leftSide = getSideOfLine(i.left, start);
             if (leftSide == Side.left) return -1;
@@ -154,7 +131,7 @@ const findInterval: <F extends IFace<any>>(
             if (rightSide == Side.right) return 1;
             if (rightSide == Side.on) onRight = true;
 
-            if (leftSide == Side.right && rightSide == Side.left) return 0;
+            if (leftSide == Side.right && rightSide == Side.left) return steer;
         }
 
         // The start point lies on a boundary, check if the endpoint goes in/through the boundary
@@ -166,7 +143,8 @@ const findInterval: <F extends IFace<any>>(
             const side = getSideOfLine(i.right, end);
             if (side == Side.right) return 1;
         }
-        return 0;
+
+        return steer;
     };
 
 /**
@@ -194,7 +172,7 @@ function getIntersectionPoint(a: ISegment, b: ISegment): IPoint {
             y: slopeA * b.start.x + interceptA,
         };
 
-    const x = (interceptA - interceptB) / (slopeA - slopeB);
+    const x = (interceptA - interceptB) / (slopeB - slopeA);
     const y = slopeA * x + interceptA;
     return {x, y};
 }
@@ -271,9 +249,10 @@ function getContinuationsThroughPoint<F extends IFace<any>>(
     const cutOff: IBoundary<F>[] = [];
 
     let intervals: IInterval<F>[];
+    let leftBoundary: IBoundary<F> | undefined;
+    let rightBoundary: IBoundary<F> | undefined;
+
     if (bottomBoundaries.length >= 2) {
-        let leftBoundary: IBoundary<F> | undefined;
-        let rightBoundary: IBoundary<F> | undefined;
         for (let boundary of bottomBoundaries) {
             if (!leftBoundary || getLineSideOfLine(boundary, leftBoundary) == Side.left)
                 leftBoundary = boundary;
@@ -284,31 +263,45 @@ function getContinuationsThroughPoint<F extends IFace<any>>(
                 rightBoundary = boundary;
         }
         intervals = scanLine.findRange(
-            findInterval(leftBoundary!),
-            findInterval(rightBoundary!)
+            findInterval(leftBoundary!, Side.left),
+            findInterval(rightBoundary!, Side.right)
         );
     } else {
-        const query = findInterval({start: point, end: point});
-        intervals = scanLine.findRange(query, query);
+        intervals = scanLine.findRange(
+            findInterval({start: point, end: point}, Side.left),
+            findInterval({start: point, end: point}, Side.right)
+        );
     }
-    if (intervals.length < 1)
-        throw new Error(`Reached unreachable state 1: ${JSON.stringify(point)}`);
 
     let prevInterval: IInterval<F> = intervals[0];
     const endIntervals = intervals.slice(1);
     for (let interval of endIntervals) {
-        if (interval.left && interval.left.end != point) {
-            const newBoundary: IBoundary<F> = {
-                ...interval.left,
-                start: point,
-            };
-            cutOff.push(newBoundary);
+        const left = interval.left;
 
-            prevInterval.right = interval.left = {
-                ...interval.left,
-                end: point,
-            };
+        if (left) {
+            let intersects = false;
+            if (leftBoundary && rightBoundary) {
+                if (getSideOfLine(left, point) == Side.on) intersects = left.end != point;
+                else if (doesIntersect(leftBoundary, left)) intersects = true;
+                else if (doesIntersect(rightBoundary, left)) intersects = true;
+            } else {
+                intersects = left.end != point;
+            }
+
+            if (intersects) {
+                const newBoundary: IBoundary<F> = {
+                    ...left,
+                    start: point,
+                };
+                cutOff.push(newBoundary);
+
+                prevInterval.right = interval.left = {
+                    ...left,
+                    end: point,
+                };
+            }
         }
+
         prevInterval = interval;
     }
     return cutOff;
@@ -324,8 +317,22 @@ function removeBoundariesAtPoint<F extends IFace<any>>(
     point: IPoint,
     scanLine: BalancedSearchTree<IInterval<F>>
 ): {leftInterval: IInterval<F>; rightInterval: IInterval<F>} {
-    const query = findInterval({start: point, end: point});
-    const intervals = scanLine.findRange(query, query);
+    const intervals = scanLine.findRange(
+        findInterval(
+            {
+                start: point,
+                end: point,
+            },
+            Side.left
+        ),
+        findInterval(
+            {
+                start: point,
+                end: point,
+            },
+            Side.right
+        )
+    );
     if (intervals.length < 1)
         throw new Error(`Reached unreachable state 2: ${JSON.stringify(point)}`);
 
@@ -339,35 +346,30 @@ function removeBoundariesAtPoint<F extends IFace<any>>(
     const leftInterval = intervals[0];
     const rightInterval = intervals[intervals.length - 1];
 
-    // If more than 1 interval was found, the point lies on an edge which should be broken
-    if (intervals.length > 1) {
-        if (leftInterval.right) leftInterval.shape.right.push(leftInterval.right.end);
-        if (rightInterval.left) rightInterval.shape.left.push(rightInterval.left.end);
-    }
-
     return {leftInterval, rightInterval};
 }
 
 /**
  * Adds the inner intervals for the given boundaries
  * @param boundaries The boundaries that form a new polygon section
- * @param scanLine The scanline to add the new intervals to
  * @param startSources The sources of the interval to the left of left most boundary
- * @param output The output to add the new polygon sections to
- * @returns The left and right most boundaries
+ * @returns The left and right most boundaries, and the new intervals
  */
 function addBoundariesInnerIntervals<F extends IFace<any>>(
     boundaries: IBoundary<F>[],
-    scanLine: BalancedSearchTree<IInterval<F>>,
-    startSources: IFaceSource<F>[],
-    output: Set<IMonotonePolygonSection<F>>
-): {leftBoundary: IBoundary<F>; rightBoundary: IBoundary<F>} {
+    startSources: IFaceSource<F>[]
+): {
+    leftBoundary: IBoundary<F>;
+    rightBoundary: IBoundary<F>;
+    newIntervals: IInterval<F>[];
+} {
     const point = boundaries[0].start; // The start points are all the same
     const sortedBoundaries = sortBoundaries(boundaries);
     const endBoundaries = sortedBoundaries.slice(1);
 
     let prevBoundary = sortedBoundaries[0];
     let sources = startSources;
+    const newIntervals: IInterval<F>[] = [];
     for (let boundary of endBoundaries) {
         sources = augmentSources(sources, prevBoundary);
 
@@ -382,8 +384,7 @@ function addBoundariesInnerIntervals<F extends IFace<any>>(
             sources,
             shape: newShape,
         };
-        output.add(newShape);
-        scanLine.insert(newInterval);
+        newIntervals.push(newInterval);
 
         prevBoundary = boundary;
     }
@@ -391,6 +392,7 @@ function addBoundariesInnerIntervals<F extends IFace<any>>(
     return {
         leftBoundary: sortedBoundaries[0],
         rightBoundary: sortedBoundaries[sortedBoundaries.length - 1],
+        newIntervals,
     };
 }
 
@@ -462,46 +464,64 @@ function handleEvents<F extends IFace<any>>(
 
     // Remove
     const {leftInterval, rightInterval} = removeBoundariesAtPoint(point, scanLine);
-
     const allNewBoundaries = [...newEventBoundaries, ...extraNewBoundaries];
 
     if (allNewBoundaries.length > 0) {
-        const {leftBoundary, rightBoundary} = addBoundariesInnerIntervals(
+        const {leftBoundary, rightBoundary, newIntervals} = addBoundariesInnerIntervals(
             allNewBoundaries,
-            scanLine,
-            leftInterval.sources,
-            output
+            leftInterval.sources
         );
-        const {shape: lis} = leftInterval;
-        const {left: lsl, right: lsr} = lis;
-        const newLeftInterval: IInterval<F> = {
-            ...leftInterval,
-            right: leftBoundary,
-            shape: {
-                sources: leftInterval.sources,
-                left: lsl.length == 0 ? [] : [lsl[lsl.length - 1]],
-                right: [point],
-                bottomLeft: lis,
-            },
-        };
 
-        const {shape: ris} = rightInterval;
-        const {left: rsl, right: rsr} = ris;
-        const newRightInterval: IInterval<F> = {
-            ...rightInterval,
-            left: rightBoundary,
-            shape: {
-                sources: rightInterval.sources,
-                left: [point],
-                right: rsr.length == 0 ? [] : [rsr[rsr.length - 1]],
-                bottomRight: ris,
-            },
-        };
+        let newLeftInterval: IInterval<F>;
+        let newRightInterval: IInterval<F>;
+        if (leftInterval == rightInterval) {
+            scanLine.delete(leftInterval);
 
-        lis.topLeft = newLeftInterval.shape;
-        ris.topRight = newRightInterval.shape;
-        scanLine.insert(newLeftInterval);
-        scanLine.insert(newRightInterval);
+            const {shape: lis} = leftInterval;
+            const {left: lsl, right: lsr} = lis;
+            newLeftInterval = {
+                ...leftInterval,
+                right: leftBoundary,
+                shape: {
+                    sources: leftInterval.sources,
+                    left: lsl.length == 0 ? [] : [lsl[lsl.length - 1]],
+                    right: [point],
+                    bottomLeft: lis,
+                },
+            };
+
+            const {shape: ris} = rightInterval;
+            const {left: rsl, right: rsr} = ris;
+            newRightInterval = {
+                ...rightInterval,
+                left: rightBoundary,
+                shape: {
+                    sources: rightInterval.sources,
+                    left: [point],
+                    right: rsr.length == 0 ? [] : [rsr[rsr.length - 1]],
+                    bottomRight: ris,
+                },
+            };
+
+            lis.topLeft = newLeftInterval.shape;
+            ris.topRight = newRightInterval.shape;
+            scanLine.insert(newLeftInterval);
+            scanLine.insert(newRightInterval);
+        } else {
+            newLeftInterval = leftInterval;
+            newRightInterval = rightInterval;
+
+            newLeftInterval.right = leftBoundary;
+            newRightInterval.left = rightBoundary;
+
+            if (leftInterval.right) leftInterval.shape.right.push(point);
+            if (rightInterval.left) rightInterval.shape.left.push(point);
+        }
+
+        for (let interval of newIntervals) {
+            if (interval.sources.length > 0) output.add(interval.shape);
+            scanLine.insert(interval);
+        }
 
         // Check for line intersections, and note that it's impossible to intersect any of the internal boundaries such that they don't have to be checked
         if (leftInterval.left && doesIntersect(leftInterval.left, leftBoundary)) {
@@ -550,6 +570,7 @@ function handleEvents<F extends IFace<any>>(
             eventQueue.insert(crossEvent);
         }
     }
+    debugger;
 }
 
 /**
@@ -570,18 +591,21 @@ function handleCrossEvent<F extends IFace<any>>(
     if (!leftSegment || !rightSegment)
         throw new Error(`Reached unreachable state 3: ${JSON.stringify(event)}`);
 
-    const leftQuery = findInterval(leftSegment);
-    const leftIntervals = scanLine.findRange(leftQuery, leftQuery);
+    const leftIntervals = scanLine.findRange(
+        findInterval(leftSegment, Side.left),
+        findInterval(leftSegment, Side.right)
+    );
     if (leftIntervals.length < 2)
         throw new Error(`Reached unreachable state 4: ${JSON.stringify(leftSegment)}`);
 
-    const rightQuery = findInterval(rightSegment);
-    const rightIntervals = scanLine.findRange(rightQuery, rightQuery);
+    const rightIntervals = scanLine.findRange(
+        findInterval(rightSegment, Side.left),
+        findInterval(rightSegment, Side.right)
+    );
     if (rightIntervals.length < 2)
         throw new Error(`Reached unreachable state 5: ${JSON.stringify(rightSegment)}`);
 
     // Split all left intervals
-    let prevInterval = leftIntervals[0];
     let endIntervals = leftIntervals.slice(1);
     for (let leftInterval of endIntervals) {
         const {left} = leftInterval;
@@ -596,13 +620,10 @@ function handleCrossEvent<F extends IFace<any>>(
                     : {type: "rightContinue", prev, next, point, source};
             eventQueue.insert(newEvent);
         }
-
-        prevInterval = leftInterval;
     }
 
     // Split all right intervals
-    prevInterval = rightIntervals[0];
-    endIntervals = rightIntervals.slice(1);
+    endIntervals = rightIntervals.slice(0, -1);
     for (let rightInterval of endIntervals) {
         const {right} = rightInterval;
         if (right && right.end != point) {
@@ -616,8 +637,6 @@ function handleCrossEvent<F extends IFace<any>>(
                     : {type: "rightContinue", prev, next, point, source};
             eventQueue.insert(newEvent);
         }
-
-        prevInterval = rightInterval;
     }
 }
 
@@ -656,41 +675,37 @@ function exploreSection<F extends IFace<any>>(
     remainingSections: Set<IMonotonePolygonSection<F>>,
     output: IPoint[]
 ): void {
+    // TODO: deal with polygons with holes
     remainingSections.delete(section);
+
+    const {topLeft, bottomLeft, bottomRight, topRight} = section;
 
     let start = 0;
     if (parent) {
-        if (section.topLeft == parent) start = 0;
-        else if (section.bottomLeft == parent) start = 1;
-        else if (section.bottomRight == parent) start = 2;
-        else if (section.topRight == parent) start = 3;
+        if (topLeft == parent) start = 0;
+        else if (bottomLeft == parent) start = 1;
+        else if (bottomRight == parent) start = 2;
+        else if (topRight == parent) start = 3;
     }
 
     for (let i = 0; i < 4; i++) {
         const side = (i + start) % 4;
-        if (!(i == 0 && parent)) {
-            if (side == 0) {
-                if (section.topLeft)
-                    exploreSection(section.topLeft, parent, remainingSections, output);
-            } else if (side == 1) {
-                if (section.bottomLeft)
-                    exploreSection(section.bottomLeft, parent, remainingSections, output);
-            } else if (side == 2) {
-                if (section.bottomRight)
-                    exploreSection(
-                        section.bottomRight,
-                        parent,
-                        remainingSections,
-                        output
-                    );
-            } else if (side == 3) {
-                if (section.topRight)
-                    exploreSection(section.topRight, parent, remainingSections, output);
-            }
+        if (side == 0) {
+            if (topLeft && topLeft != parent)
+                exploreSection(topLeft, section, remainingSections, output);
+        } else if (side == 1) {
+            if (bottomLeft && bottomLeft != parent)
+                exploreSection(bottomLeft, section, remainingSections, output);
+        } else if (side == 2) {
+            if (bottomRight && bottomRight != parent)
+                exploreSection(bottomRight, section, remainingSections, output);
+        } else if (side == 3) {
+            if (topRight && topRight != parent)
+                exploreSection(topRight, section, remainingSections, output);
         }
 
         if (side == 0) {
-            output.push(...section.left.slice(1).reverse());
+            output.push(...section.left.slice(0, -1).reverse());
         } else if (side == 2) {
             output.push(...section.right.slice(1));
         }
