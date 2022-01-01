@@ -1,17 +1,23 @@
 import {IFace} from "../data/_types/IFace";
 import {IPoint} from "../data/_types/IPoint";
 import {IEvent} from "./_types/IEvents";
+import {IFaceSource} from "./_types/IFaceSource";
 
 /**
  * Retrieves all the events for a given face (except fro crossing events with other faces)
  * @note Requires no three points to lie on one line (such intermediate points would be redundant anyhow)
  * @param face The face to retrieve all the events for
+ * @param id The id for this face
  * @returns All the face's events
  */
-export function getFaceEvents<D>(face: IFace<D>): IEvent<D>[] {
-    const events: IEvent<D>[] = [];
+export function getFaceEvents<F extends IFace<any>>(face: F, id: number): IEvent<F>[] {
+    const events: IEvent<F>[] = [];
 
-    const {polygon, data} = face;
+    const {polygon} = face;
+    const source: IFaceSource<F> = {
+        face,
+        id,
+    };
     let prev: IPoint = polygon[polygon.length - 2];
     let point: IPoint = polygon[polygon.length - 1];
 
@@ -40,12 +46,12 @@ export function getFaceEvents<D>(face: IFace<D>): IEvent<D>[] {
         }
 
         // Create the event
-        let event: IEvent<D>;
+        let event: IEvent<F>;
         if (type == "start")
             event = {
                 type,
                 point,
-                data,
+                source,
                 left: prev,
                 right: next,
             };
@@ -53,27 +59,31 @@ export function getFaceEvents<D>(face: IFace<D>): IEvent<D>[] {
             event = {
                 type,
                 point,
-                data,
+                source,
+                left: prev,
+                right: next,
             };
         else if (type == "split")
             event = {
                 type,
                 point,
-                data,
-                left: prev,
-                right: next,
+                source,
+                left: next,
+                right: prev,
             };
         else if (type == "stop")
             event = {
                 type,
                 point,
-                data,
+                source,
+                right: prev,
+                left: next,
             };
         else if (type == "leftContinue")
             event = {
                 type,
                 point,
-                data,
+                source,
                 prev: next,
                 next: prev,
             };
@@ -82,7 +92,7 @@ export function getFaceEvents<D>(face: IFace<D>): IEvent<D>[] {
             event = {
                 type,
                 point,
-                data,
+                source,
                 prev,
                 next,
             };
