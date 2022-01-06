@@ -12,6 +12,8 @@ export type IInterval<F extends IFace<any>> = {
     shape: IMonotonePolygonSection<F>;
     /** The input faces that make up the face that this interval is part of */
     sources: IFaceSource<F>[];
+    /** The point at which the left and right boundaries are going to intersect (if any) */
+    intersection?: IPoint;
 };
 
 export type IBoundary<F extends IFace<any>> = {

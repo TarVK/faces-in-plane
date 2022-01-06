@@ -19,6 +19,8 @@ export type IPolygonEventBase<F extends IFace<any>> = {
     point: IPoint;
     /** The associated source face that created the event */
     source: IFaceSource<F>;
+    /** The id of the event */
+    id: number;
 };
 
 export type IStartEvent<F extends IFace<any>> = {
@@ -82,4 +84,6 @@ export type ICrossEvent<F extends IFace<any>> = {
     point: IPoint;
     /** The interval whose boundaries are going to intersect at the given point */
     interval: IInterval<F>;
+    /** The id of the event */
+    id: number;
 };

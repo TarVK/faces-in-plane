@@ -1,5 +1,8 @@
 import {IFace} from "../data/_types/IFace";
 import {IPoint} from "../data/_types/IPoint";
+import {getSideOfLine} from "../utils/getSideOfLine";
+import {Side} from "../utils/Side";
+import {ICounter} from "./_types/ICounter";
 import {IEvent} from "./_types/IEvents";
 import {IFaceSource} from "./_types/IFaceSource";
 
@@ -8,9 +11,14 @@ import {IFaceSource} from "./_types/IFaceSource";
  * @note Requires no three points to lie on one line (such intermediate points would be redundant anyhow)
  * @param face The face to retrieve all the events for
  * @param id The id for this face
+ * @param eventIdCounter The counter to retrieve the next event id
  * @returns All the face's events
  */
-export function getFaceEvents<F extends IFace<any>>(face: F, id: number): IEvent<F>[] {
+export function getFaceEvents<F extends IFace<any>>(
+    face: F,
+    id: number,
+    eventIdCounter: ICounter
+): IEvent<F>[] {
     const events: IEvent<F>[] = [];
 
     const {polygon} = face;
@@ -22,6 +30,8 @@ export function getFaceEvents<F extends IFace<any>>(face: F, id: number): IEvent
     let point: IPoint = polygon[polygon.length - 1];
 
     for (let next of polygon) {
+        const isLeftTurn = getSideOfLine({start: prev, end: point}, next) == Side.left;
+
         // Identify the event type (using symbolic counter-clockwise rotation)
         let type:
             | "start"
@@ -31,13 +41,14 @@ export function getFaceEvents<F extends IFace<any>>(face: F, id: number): IEvent
             | "split"
             | "merge"
             | undefined;
-        if (next.x > prev.x) {
+        if (isLeftTurn) {
             if (point.y < prev.y && point.y <= next.y) type = "start";
-            else if (point.y >= prev.y && point.y > next.y) type = "merge";
-        } else if (next.x < prev.x) {
+            else if (point.y > prev.y && point.y >= next.y) type = "stop";
+        } else {
             if (point.y <= prev.y && point.y < next.y) type = "split";
             else if (point.y > prev.y && point.y >= next.y) type = "stop";
         }
+
         if (!type) {
             if (next.y > point.y) type = "rightContinue";
             else if (next.y < point.y) type = "leftContinue";
@@ -46,10 +57,12 @@ export function getFaceEvents<F extends IFace<any>>(face: F, id: number): IEvent
         }
 
         // Create the event
+        const id = eventIdCounter();
         let event: IEvent<F>;
         if (type == "start")
             event = {
                 type,
+                id,
                 point,
                 source,
                 left: prev,
@@ -58,6 +71,7 @@ export function getFaceEvents<F extends IFace<any>>(face: F, id: number): IEvent
         else if (type == "merge")
             event = {
                 type,
+                id,
                 point,
                 source,
                 left: prev,
@@ -66,6 +80,7 @@ export function getFaceEvents<F extends IFace<any>>(face: F, id: number): IEvent
         else if (type == "split")
             event = {
                 type,
+                id,
                 point,
                 source,
                 left: next,
@@ -74,6 +89,7 @@ export function getFaceEvents<F extends IFace<any>>(face: F, id: number): IEvent
         else if (type == "stop")
             event = {
                 type,
+                id,
                 point,
                 source,
                 right: prev,
@@ -82,6 +98,7 @@ export function getFaceEvents<F extends IFace<any>>(face: F, id: number): IEvent
         else if (type == "leftContinue")
             event = {
                 type,
+                id,
                 point,
                 source,
                 prev: next,
@@ -91,6 +108,7 @@ export function getFaceEvents<F extends IFace<any>>(face: F, id: number): IEvent
         else
             event = {
                 type,
+                id,
                 point,
                 source,
                 prev,
