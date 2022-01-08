@@ -46,7 +46,7 @@ export function getFaceEvents<F extends IFace<any>>(
             else if (point.y > prev.y && point.y >= next.y) type = "stop";
         } else {
             if (point.y <= prev.y && point.y < next.y) type = "split";
-            else if (point.y > prev.y && point.y >= next.y) type = "stop";
+            else if (point.y >= prev.y && point.y > next.y) type = "merge";
         }
 
         if (!type) {
