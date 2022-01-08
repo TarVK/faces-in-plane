@@ -43,28 +43,99 @@ const createFaces = <S extends any>(inputs: {data: S; polygon: [number, number][
 //         ],
 //     },
 // ]);
+// const inputFaces: IFace<number>[] = createFaces([
+//     {
+//         data: 1,
+//         polygon: [
+//             [250, 50],
+//             [350, 150],
+//             [300, 250],
+//             [150, 150],
+//         ],
+//     },
+//     {
+//         data: 2,
+//         polygon: [
+//             [300, 50],
+//             [400, 150],
+//             [300, 250],
+//             [200, 150],
+//         ],
+//     },
+// ]);
+// const inputFaces: IFace<number>[] = createFaces([
+//     {
+//         data: 1,
+//         polygon: [
+//             [150, 50],
+//             [250, 100],
+//             [250, 200],
+//             [150, 250],
+//             [50, 200],
+//             [50, 100],
+//         ],
+//     },
+//     {
+//         data: 2,
+//         polygon: [
+//             [150, 100],
+//             [200, 150],
+//             [150, 200],
+//             [100, 150],
+//         ],
+//     },
+// ]);
+// const inputFaces: IFace<number>[] = createFaces([
+//     {
+//         data: 1,
+//         polygon: [
+//             [50, 50],
+//             [150, 50],
+//             [150, 150],
+//             [50, 150],
+//         ],
+//     },
+//     {
+//         data: 2,
+//         polygon: [
+//             [150, 50],
+//             [250, 50],
+//             [250, 250],
+//             [50, 250],
+//             [50, 150],
+//             [150, 150],
+//         ],
+//     },
+// ]);
 const inputFaces: IFace<number>[] = createFaces([
     {
         data: 1,
         polygon: [
+            [50, 50],
             [150, 50],
-            [250, 100],
-            [250, 200],
-            [150, 250],
-            [50, 200],
-            [50, 100],
+            [150, 150],
+            [50, 150],
         ],
     },
     {
         data: 2,
         polygon: [
-            [150, 100],
-            [200, 150],
-            [150, 200],
-            [100, 150],
+            [150, 50],
+            [250, 50],
+            [250, 250],
+            [50, 250],
+            [50, 150],
+            [150, 130],
         ],
     },
 ]);
+
+function separate<T>(faces: IFace<T>[], amount: number): IFace<T>[] {
+    return faces.map((face, i) => ({
+        ...face,
+        polygon: face.polygon.map(p => ({x: p.x + amount * i, y: p.y})),
+    }));
+}
 
 const combinedFaces = combineFaces(inputFaces).map(({data, polygon}) => ({
     polygon,
@@ -73,7 +144,7 @@ const combinedFaces = combineFaces(inputFaces).map(({data, polygon}) => ({
 console.log(combinedFaces);
 
 const state: IGameState = {
-    faces: combinedFaces,
+    faces: separate(combinedFaces, 0),
 };
 
 export const App: FC = () => {

@@ -741,6 +741,8 @@ function generateFaces<F extends IFace<any>>(
             lastPoint = point;
         }
 
+        if (noDuplicates.length <= 2) continue;
+
         const face: IFace<F[]> = {
             data: section.sources.map(({face}) => face),
             polygon: noDuplicates,
