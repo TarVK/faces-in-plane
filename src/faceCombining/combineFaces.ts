@@ -734,9 +734,16 @@ function generateFaces<F extends IFace<any>>(
         const points: IPoint[] = [];
         exploreSection(section, undefined, sections, points);
 
+        const noDuplicates: IPoint[] = [];
+        let lastPoint: IPoint = points[points.length - 1];
+        for (let point of points) {
+            if (!pointEquals(lastPoint, point)) noDuplicates.push(point);
+            lastPoint = point;
+        }
+
         const face: IFace<F[]> = {
             data: section.sources.map(({face}) => face),
-            polygon: points,
+            polygon: noDuplicates,
         };
         output.push(face);
     }
@@ -787,21 +794,7 @@ function exploreSection<F extends IFace<any>>(
                 exploreSection(topRight, section, remainingSections, output);
         }
 
-        if (side == 0) {
-            const points = section.left.reverse();
-            const lastOutput = output[output.length - 1];
-            const newPoints =
-                lastOutput && pointEquals(lastOutput, points[0])
-                    ? points.slice(1)
-                    : points;
-            output.push(...newPoints);
-        } else if (side == 2) {
-            const lastOutput = output[output.length - 1];
-            const newPoints =
-                lastOutput && pointEquals(lastOutput, section.right[0])
-                    ? section.right.slice(1)
-                    : section.right;
-            output.push(...newPoints);
-        }
+        if (side == 0) output.push(...section.left.reverse());
+        else if (side == 2) output.push(...section.right);
     }
 }
