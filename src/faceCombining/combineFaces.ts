@@ -294,7 +294,7 @@ function getContinuationsThroughPoint<F extends IFace<any>>(
                     ...left,
                     end: point,
                 };
-                debugger;
+                // debugger;
             }
         }
 
@@ -749,13 +749,15 @@ function generateFaces<F extends IFace<any>>(
  * @param section The section to be explored
  * @param parent The parent to not backtrack into
  * @param output The list of points to output
+ * @returns Whether this was a newly found section (as opposed to one already handled in case of a loop)
  */
 function exploreSection<F extends IFace<any>>(
     section: IMonotonePolygonSection<F>,
     parent: IMonotonePolygonSection<F> | undefined,
     remainingSections: Set<IMonotonePolygonSection<F>>,
     output: IPoint[]
-): void {
+) {
+    // If the section was already visited we encountered a loop
     if (!remainingSections.has(section)) return;
     remainingSections.delete(section);
 
@@ -772,21 +774,34 @@ function exploreSection<F extends IFace<any>>(
     for (let i = 0; i < 4; i++) {
         const side = (i + start) % 4;
         if (side == 0) {
-            if (topLeft) exploreSection(topLeft, section, remainingSections, output);
+            if (topLeft && topLeft != parent)
+                exploreSection(topLeft, section, remainingSections, output);
         } else if (side == 1) {
-            if (bottomLeft)
+            if (bottomLeft && bottomLeft != parent)
                 exploreSection(bottomLeft, section, remainingSections, output);
         } else if (side == 2) {
-            if (bottomRight)
+            if (bottomRight && bottomRight != parent)
                 exploreSection(bottomRight, section, remainingSections, output);
         } else if (side == 3) {
-            if (topRight) exploreSection(topRight, section, remainingSections, output);
+            if (topRight && topRight != parent)
+                exploreSection(topRight, section, remainingSections, output);
         }
 
         if (side == 0) {
-            output.push(...section.left.slice(0, -1).reverse());
+            const points = section.left.reverse();
+            const lastOutput = output[output.length - 1];
+            const newPoints =
+                lastOutput && pointEquals(lastOutput, points[0])
+                    ? points.slice(1)
+                    : points;
+            output.push(...newPoints);
         } else if (side == 2) {
-            output.push(...section.right.slice(1));
+            const lastOutput = output[output.length - 1];
+            const newPoints =
+                lastOutput && pointEquals(lastOutput, section.right[0])
+                    ? section.right.slice(1)
+                    : section.right;
+            output.push(...newPoints);
         }
     }
 }
