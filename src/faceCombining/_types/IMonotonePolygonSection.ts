@@ -1,6 +1,5 @@
 import {IFace} from "../../data/_types/IFace";
 import {IPoint} from "../../data/_types/IPoint";
-import {IFaceSource} from "./IFaceSource";
 
 export type IMonotonePolygonSection<F extends IFace<any>> = {
     /** The points forming the left wall of this section */
@@ -8,7 +7,7 @@ export type IMonotonePolygonSection<F extends IFace<any>> = {
     /** The points forming the right wall of this section */
     right: IPoint[];
     /** The faces that formed this polygon */
-    sources: IFaceSource<F>[];
+    sources: F[];
     /** The polygon to the bottom left of this section */
     bottomLeft?: IMonotonePolygonSection<F>;
     /** The polygon to the bottom right of this section */

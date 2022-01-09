@@ -3,29 +3,23 @@ import {IPoint} from "../data/_types/IPoint";
 import {getSideOfLine} from "../utils/getSideOfLine";
 import {Side} from "../utils/Side";
 import {ICounter} from "./_types/ICounter";
-import {IEvent} from "./_types/IEvents";
-import {IFaceSource} from "./_types/IFaceSource";
+import {IEvent} from "./_types/IEvent";
 
 /**
  * Retrieves all the events for a given face (except fro crossing events with other faces)
  * @note Requires no three points to lie on one line (such intermediate points would be redundant anyhow)
  * @param face The face to retrieve all the events for
- * @param id The id for this face
  * @param eventIdCounter The counter to retrieve the next event id
  * @returns All the face's events
  */
 export function getFaceEvents<F extends IFace<any>>(
     face: F,
-    id: number,
     eventIdCounter: ICounter
 ): IEvent<F>[] {
     const events: IEvent<F>[] = [];
 
+    const source = face;
     const {polygon} = face;
-    const source: IFaceSource<F> = {
-        face,
-        id,
-    };
     let prev: IPoint = polygon[polygon.length - 2];
     let point: IPoint = polygon[polygon.length - 1];
 
@@ -56,66 +50,40 @@ export function getFaceEvents<F extends IFace<any>>(
             else type = "leftContinue";
         }
 
-        // Create the event
-        const id = eventIdCounter();
-        let event: IEvent<F>;
-        if (type == "start")
-            event = {
-                type,
-                id,
+        // Create the events
+        if (type == "start" || type == "split") {
+            events.push({
+                type: "line",
                 point,
+                end: prev,
+                side: "left",
+                id: eventIdCounter(),
                 source,
-                left: prev,
-                right: next,
-            };
-        else if (type == "merge")
-            event = {
-                type,
-                id,
+            });
+            events.push({
+                type: "line",
                 point,
+                end: next,
+                side: "right",
+                id: eventIdCounter(),
                 source,
-                left: prev,
-                right: next,
-            };
-        else if (type == "split")
-            event = {
-                type,
-                id,
+            });
+        } else if (type == "merge" || type == "stop") {
+            events.push({
+                type: "lineEnd",
                 point,
-                source,
-                left: next,
-                right: prev,
-            };
-        else if (type == "stop")
-            event = {
-                type,
-                id,
+                id: eventIdCounter(),
+            });
+        } else {
+            events.push({
+                type: "line",
                 point,
+                end: type == "leftContinue" ? prev : next,
+                side: type == "leftContinue" ? "left" : "right",
+                id: eventIdCounter(),
                 source,
-                right: prev,
-                left: next,
-            };
-        else if (type == "leftContinue")
-            event = {
-                type,
-                id,
-                point,
-                source,
-                prev: next,
-                next: prev,
-            };
-        // type == "rightContinue"
-        else
-            event = {
-                type,
-                id,
-                point,
-                source,
-                prev,
-                next,
-            };
-
-        events.push(event);
+            });
+        }
 
         // Update the points for the next iteration
         prev = point;
