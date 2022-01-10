@@ -76,7 +76,7 @@ export class TrapezoidalDecomposition<T> {
                     else node = node.above;
                 } else if (isPointNode(node)) {
                     if (
-                        point.x >= node.point.x ||
+                        point.x > node.point.x ||
                         //Apply symbolic shear transformation:
                         (point.x == node.point.x && point.y > node.point.y)
                     )
@@ -92,7 +92,7 @@ export class TrapezoidalDecomposition<T> {
                     else node = node.above;
                 } else if (isPointNode(node)) {
                     if (
-                        os.start.x >= node.point.x ||
+                        os.start.x > node.point.x ||
                         (os.start.x == node.point.x && os.start.y > node.point.y)
                     )
                         node = node.right;
@@ -472,7 +472,7 @@ export class TrapezoidalDecomposition<T> {
      * Determines whether segment a is below segment b
      * @param a Segment a
      * @param b Segment b
-     * Whether a is below b
+     * @returns Whether a is below b
      */
     protected isLineBelow(a: ISegment, b: ISegment): boolean {
         const oa = orientSegment(a);
@@ -502,7 +502,7 @@ export class TrapezoidalDecomposition<T> {
      * Determines whether line a is below segment b
      * @param a Line a
      * @param b Segment b
-     * Whether a is below b
+     * @returns Whether a is below b
      */
     protected isPointBelow(a: IPoint, b: ISegment) {
         return getSideOfLine(orientSegment(b), a) == Side.right;
