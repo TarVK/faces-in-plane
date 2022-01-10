@@ -254,12 +254,16 @@ function handleEvents<F extends IFace<any>>(
             leftInterval.shape.right.push(point);
             rightInterval.shape.left.push(point);
 
+            if (newLeftInterval.intersection)
+                eventQueue.delete(newLeftInterval.intersection);
+            if (newRightInterval.intersection)
+                eventQueue.delete(newRightInterval.intersection);
+
             checkIntersections(newLeftInterval, eventQueue, eventIdCounter);
             checkIntersections(newRightInterval, eventQueue, eventIdCounter);
         }
 
         for (let interval of newIntervals) addInterval(interval, scanLine, output); // Note that we don't have to check intersections, since these are start intervals
-        debugger;
     } else {
         removeInterval(leftInterval, scanLine, eventQueue);
         removeInterval(rightInterval, scanLine, eventQueue);
@@ -285,7 +289,6 @@ function handleEvents<F extends IFace<any>>(
         ris.topRight = newInterval.shape;
 
         addInterval(newInterval, scanLine, output, eventIdCounter, eventQueue);
-        debugger;
     }
 }
 
