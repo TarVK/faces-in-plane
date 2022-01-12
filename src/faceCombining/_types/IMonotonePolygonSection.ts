@@ -1,6 +1,7 @@
 import {IFace} from "../../data/_types/IFace";
 import {IPoint} from "../../data/_types/IPoint";
 
+/** A y-monotone polygon section */
 export type IMonotonePolygonSection<F extends IFace<any>> = {
     /** The points forming the left wall of this section */
     left: IPoint[];

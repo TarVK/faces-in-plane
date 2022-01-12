@@ -49,7 +49,10 @@ export function combineFaces<F extends IFace<any>>(faces: F[]): IFace<F[]>[] {
         // Compare from the perspective of the start point furthest up,
         // since the lower point may have been calculated to be the intersection of the lines through segments a and b
         // in that case rounding issues may yield the wrong result for left or right
-        if (a.start.y >= b.start.y) {
+        if (
+            a.start.y >= b.start.y ||
+            (a.start.y == b.start.y && a.start.x >= b.start.x)
+        ) {
             const aStartSide = getSideOfLine(b, a.start);
             if (aStartSide == Side.left) return -1;
             if (aStartSide == Side.right) return 1;
@@ -78,7 +81,7 @@ export function combineFaces<F extends IFace<any>>(faces: F[]): IFace<F[]>[] {
         },
     };
     scanLine.insert(outerInterval);
-    const startSections = new Set<IMonotonePolygonSection<F>>();
+    const sections = new Set<IMonotonePolygonSection<F>>();
 
     let event: IEvent<F> | undefined;
     while ((event = events.getMin())) {
@@ -98,11 +101,11 @@ export function combineFaces<F extends IFace<any>>(faces: F[]): IFace<F[]>[] {
                 eventsAtPoint.push(nextEvent);
             }
 
-            handleEvents(eventsAtPoint, scanLine, startSections, events, eventIdCounter);
+            handleEvents(eventsAtPoint, scanLine, sections, events, eventIdCounter);
         }
     }
 
-    return generateFaces(startSections);
+    return generateFaces(sections);
 }
 
 /**
@@ -208,14 +211,12 @@ function handleEvents<F extends IFace<any>>(
             leftInterval.shape.sources
         );
 
-        let newLeftInterval: IInterval<F>;
-        let newRightInterval: IInterval<F>;
         if (leftInterval == rightInterval) {
             removeInterval(leftInterval, scanLine, eventQueue);
 
             const {shape: lis} = leftInterval;
             const {left: lsl} = lis;
-            newLeftInterval = {
+            const newLeftInterval: IInterval<F> = {
                 ...leftInterval,
                 right: leftBoundary,
                 shape: {
@@ -228,7 +229,7 @@ function handleEvents<F extends IFace<any>>(
 
             const {shape: ris} = rightInterval;
             const {right: rsr} = ris;
-            newRightInterval = {
+            const newRightInterval: IInterval<F> = {
                 ...rightInterval,
                 left: rightBoundary,
                 shape: {
@@ -245,22 +246,23 @@ function handleEvents<F extends IFace<any>>(
             addInterval(newLeftInterval, scanLine, output, eventIdCounter, eventQueue);
             addInterval(newRightInterval, scanLine, output, eventIdCounter, eventQueue);
         } else {
-            newLeftInterval = leftInterval;
-            newRightInterval = rightInterval;
-
-            newLeftInterval.right = leftBoundary;
-            newRightInterval.left = rightBoundary;
+            leftInterval.right = leftBoundary;
+            rightInterval.left = rightBoundary;
 
             leftInterval.shape.right.push(point);
             rightInterval.shape.left.push(point);
 
-            if (newLeftInterval.intersection)
-                eventQueue.delete(newLeftInterval.intersection);
-            if (newRightInterval.intersection)
-                eventQueue.delete(newRightInterval.intersection);
+            if (leftInterval.intersection) {
+                eventQueue.delete(leftInterval.intersection);
+                leftInterval.intersection = undefined;
+            }
+            if (rightInterval.intersection) {
+                eventQueue.delete(rightInterval.intersection);
+                rightInterval.intersection = undefined;
+            }
 
-            checkIntersections(newLeftInterval, eventQueue, eventIdCounter);
-            checkIntersections(newRightInterval, eventQueue, eventIdCounter);
+            checkIntersections(leftInterval, eventQueue, eventIdCounter);
+            checkIntersections(rightInterval, eventQueue, eventIdCounter);
         }
 
         for (let interval of newIntervals) addInterval(interval, scanLine, output); // Note that we don't have to check intersections, since these are start intervals
@@ -463,7 +465,7 @@ const findInterval: <F extends IFace<any>>(
             if (side == Side.right) return steer;
             onLeft = true;
         } else if (!i.left || !i.right) {
-            return steer; // This case shouldn't be reachable
+            return steer;
         } else {
             const leftSide = getSideOfLine(i.left, start);
             if (leftSide == Side.left) return -1;
@@ -585,6 +587,7 @@ function getIntersectionPoint(a: ISegment, b: ISegment): IPoint {
     const slopeB = (b.start.y - b.end.y) / dxB;
     const interceptB = b.start.y - slopeB * b.start.x;
 
+    if (dxA == 0 && dxB == 0) return {x: a.start.x, y: Math.max(a.start.y, b.start.y)};
     if (dxA == 0)
         return {
             x: a.start.x,
