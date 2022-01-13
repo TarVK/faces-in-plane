@@ -1,52 +1,39 @@
 {
-    "name": "tetris-but",
+    "name": "face-combiner",
     "version": "0.0.0",
     "private": true,
-    "description": "Tetris with some twists",
+    "description": "An algorithm to combine different polygons into their faces on a plane",
     "main": "build/index.js",
     "types": "build/index.d.ts",
     "files": [
         "build/**/*.{js,d.ts}"
     ],
     "scripts": {
-        "start": "webpack serve --env dev",
-        "build": "webpack --env prod",
+        "start": "node ./build/index.js",
+        "dbg": "node --inspect-brk ./build/index.js",
+        "dev": "tsc -w ",
+        "build": "tsc",
         "test": "jest -i",
         "test-watch": "jest --watch -i",
         "test-watch-debug": "node --inspect-brk ./node_modules/jest/bin/jest.js --runInBand --watch --config=\"jest.config.js\""
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/TarVK/tetris-but.git"
+        "url": "git+https://github.com/TarVK/faces-in-plane.git"
     },
-    "keywords": [
-        "SAT"
-    ],
+    "keywords": [],
     "author": "Tar van Krieken",
     "license": "MIT",
     "bugs": {
-        "url": "https://github.com/TarVK/tetris-but/issues"
+        "url": "https://github.com/TarVK/faces-in-plane/issues"
     },
-    "homepage": "https://github.com/TarVK/tetris-but#readme",
+    "homepage": "https://github.com/TarVK/faces-in-plane#readme",
     "devDependencies": {
         "@types/jest": "^26.0.15",
-        "@types/pixi.js": "^5.0.0",
-        "@types/react": "^17.0.0",
-        "@types/react-dom": "^17.0.0",
+        "@types/node": "^14.14.10",
         "jest": "^26.6.3",
         "ts-jest": "^26.4.4",
-        "ts-loader": "^8.0.11",
-        "typescript": "^4.4.2",
-        "webpack": "^5.10.0",
-        "webpack-cli": "^4.2.0",
-        "webpack-dev-server": "^3.11.0"
+        "typescript": "^4.4.2"
     },
-    "dependencies": {
-        "@fluentui/react": "^8.44.0",
-        "@fluentui/react-theme-provider": "^0.18.5",
-        "model-react": "^4.0.2",
-        "pixi.js": "^6.2.0",
-        "react": "^17.0.1",
-        "react-dom": "^17.0.1"
-    }
+    "dependencies": {}
 }

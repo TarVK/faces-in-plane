@@ -1,0 +1,50 @@
+{
+    "name": "sat-demo",
+    "version": "0.0.0",
+    "description": "A demo for the face combiner",
+    "private": true,
+    "scripts": {
+        "start": "webpack serve --env dev",
+        "build": "webpack --env prod"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/TarVK/SAT.git"
+    },
+    "keywords": [
+        "React",
+        "fuzzy-rater",
+        "fuzzy",
+        "search"
+    ],
+    "author": "Tar van Krieken",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/TarVK/SAT/issues"
+    },
+    "homepage": "https://github.com/TarVK/SAT#readme",
+    "dependencies": {
+        "@fluentui/react": "^7.153.4",
+        "@monaco-editor/react": "^4.2.2",
+        "face-combiner": "link:..",
+        "color": "^3.1.3",
+        "monaco-editor": "^0.28.1",
+        "react": "^17.0.1",
+        "react-dom": "^17.0.1",
+        "react-json-view": "^1.19.1",
+        "react-tex": "^1.5.0"
+    },
+    "devDependencies": {
+        "@types/color": "^3.0.1",
+        "@types/react": "^17.0.0",
+        "@types/react-dom": "^17.0.0",
+        "css-loader": "^6.3.0",
+        "filter-webpack-output": "^1.2.0",
+        "style-loader": "^3.3.0",
+        "ts-loader": "^8.0.11",
+        "typescript": "^4.1.2",
+        "webpack": "^5.10.0",
+        "webpack-cli": "^4.2.0",
+        "webpack-dev-server": "^3.11.0"
+    }
+}
