@@ -46,29 +46,17 @@ export function combineFaces<F extends IFace<any>>(faces: F[]): IFace<F[]>[] {
         if (!a) return -1;
         if (!b) return 1;
 
-        // Compare from the perspective of the start point furthest up,
-        // since the lower point may have been calculated to be the intersection of the lines through segments a and b
-        // in that case rounding issues may yield the wrong result for left or right
-        if (
-            a.start.y >= b.start.y ||
-            (a.start.y == b.start.y && a.start.x >= b.start.x)
-        ) {
-            const aStartSide = getSideOfLine(b, a.start);
-            if (aStartSide == Side.left) return -1;
-            if (aStartSide == Side.right) return 1;
+        const aStartSide = getSideOfLine(b, a.start);
+        const aEndSide = getSideOfLine(b, a.end);
 
-            const aEndSide = getSideOfLine(b, a.end);
-            if (aEndSide == Side.left) return -1;
-            if (aEndSide == Side.right) return 1;
-        } else {
-            const bStartSide = getSideOfLine(a, b.start);
-            if (bStartSide == Side.left) return 1;
-            if (bStartSide == Side.right) return -1;
+        // aEndSide != -aStartSide prioritizes b's result in case a's points are on opposite sides of b
+        if (aStartSide != Side.on && aEndSide != -aStartSide) return aStartSide;
+        if (aEndSide != Side.on && aEndSide != -aStartSide) return aEndSide;
 
-            const bEndSide = getSideOfLine(a, b.end);
-            if (bEndSide == Side.left) return 1;
-            if (bEndSide == Side.right) return -1;
-        }
+        const bStartSide = getSideOfLine(a, b.start);
+        if (bStartSide != Side.on) return -bStartSide;
+        const bEndSide = getSideOfLine(a, b.end);
+        if (bEndSide != Side.on) return -bEndSide;
 
         // Sort all intervals with the same left boundary arbitrarily
         return a.id - b.id;
@@ -169,8 +157,8 @@ function handleEvents<F extends IFace<any>>(
 ): void {
     const point = events[0].point; // All points are the same
     const intervalsWithPoint = scanLine.findRange(
-        findInterval({start: point, end: point}, Side.left),
-        findInterval({start: point, end: point}, Side.right)
+        getIntervalFinder(point, Side.left),
+        getIntervalFinder(point, Side.right)
     );
     if (intervalsWithPoint.length == 0)
         throw new Error(
@@ -441,51 +429,25 @@ function addInterval<F extends IFace<any>>(
 }
 
 /**
- * Returns a function that can be used to query the scanline for a given segment
- * @param segment The segment to be found
+ * Returns a function that can be used to query the scanline for a given point
+ * @param point The point to find
  * @param steer Whether to steer the query to the left, to the right right, or onto the interval
  * @returns The function to query the scanline with
  */
-const findInterval: <F extends IFace<any>>(
-    segment: ISegment,
+const getIntervalFinder: <F extends IFace<any>>(
+    point: IPoint,
     steer?: Side
 ) => (i: IInterval<F>) => -1 | 0 | 1 =
-    ({start, end}, steer = Side.on) =>
+    (point, steer = Side.on) =>
     i => {
-        let onLeft = false; // Whether the start point lies on the left of the interval
-        let onRight = false; // Whether the start point lies on the right of the interval
-        if (!i.left && i.right) {
-            const side = getSideOfLine(i.right, start);
-            if (side == Side.left) return steer;
-            if (side == Side.right) return 1;
-            onRight = true;
-        } else if (i.left && !i.right) {
-            const side = getSideOfLine(i.left, start);
-            if (side == Side.left) return -1;
-            if (side == Side.right) return steer;
-            onLeft = true;
-        } else if (!i.left || !i.right) {
-            return steer;
-        } else {
-            const leftSide = getSideOfLine(i.left, start);
+        if (i.left) {
+            const leftSide = getSideOfLine(i.left, point);
             if (leftSide == Side.left) return -1;
-            if (leftSide == Side.on) onLeft = true;
+        }
 
-            const rightSide = getSideOfLine(i.right, start);
+        if (i.right) {
+            const rightSide = getSideOfLine(i.right, point);
             if (rightSide == Side.right) return 1;
-            if (rightSide == Side.on) onRight = true;
-
-            if (leftSide == Side.right && rightSide == Side.left) return steer;
-        }
-
-        // The start point lies on a boundary, check if the endpoint goes in/through the boundary
-        if (i.left && onLeft) {
-            const side = getSideOfLine(i.left, end);
-            if (side == Side.left) return -1;
-        }
-        if (i.right && onRight) {
-            const side = getSideOfLine(i.right, end);
-            if (side == Side.right) return 1;
         }
 
         return steer;
