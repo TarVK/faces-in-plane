@@ -1,7 +1,6 @@
 import {loader, useMonaco} from "@monaco-editor/react";
 import {languages, editor} from "monaco-editor/esm/vs/editor/editor.api";
 import React, {FC, useRef, useEffect, useState} from "react";
-import {SATLanguage, SATTheme} from "./SATLanguageMonacoDefinition";
 
 /**
  * Returns an editor element, and the editor that was created
@@ -25,8 +24,8 @@ export const useEditor = ({
         if (elementRef.current) {
             const e = (editorRef.current = editor.create(elementRef.current, {
                 value: value,
-                language: SATLanguage,
-                theme: SATTheme,
+                language: "JSON",
+                // theme: SATTheme,
                 folding: true,
                 foldingStrategy: "auto",
                 // showFoldingControls: "always",

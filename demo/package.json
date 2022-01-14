@@ -1,5 +1,5 @@
 {
-    "name": "sat-demo",
+    "name": "face-combiner-demo",
     "version": "0.0.0",
     "description": "A demo for the face combiner",
     "private": true,
@@ -9,25 +9,21 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/TarVK/SAT.git"
+        "url": "git+https://github.com/TarVK/faces-in-plane.git"
     },
-    "keywords": [
-        "React",
-        "fuzzy-rater",
-        "fuzzy",
-        "search"
-    ],
+    "keywords": [],
     "author": "Tar van Krieken",
     "license": "MIT",
     "bugs": {
-        "url": "https://github.com/TarVK/SAT/issues"
+        "url": "https://github.com/TarVK/faces-in-plane/issues"
     },
-    "homepage": "https://github.com/TarVK/SAT#readme",
+    "homepage": "https://github.com/TarVK/faces-in-plane#readme",
     "dependencies": {
         "@fluentui/react": "^7.153.4",
         "@monaco-editor/react": "^4.2.2",
         "face-combiner": "link:..",
         "color": "^3.1.3",
+        "model-react": "^4.0.2",
         "monaco-editor": "^0.28.1",
         "react": "^17.0.1",
         "react-dom": "^17.0.1",
