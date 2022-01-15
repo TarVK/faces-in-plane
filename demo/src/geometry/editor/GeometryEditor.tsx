@@ -3,6 +3,7 @@ import {useDataHook} from "model-react";
 import React, {FC, useCallback, useState} from "react";
 import {useRef} from "react";
 import {XAxis, YAxis} from "./Axes";
+import {Grid} from "./Grid";
 import {IGeometryEditorProps} from "./_types/IGeometryEditorProps";
 
 export const GeometryEditor: FC<IGeometryEditorProps> = ({
@@ -63,18 +64,7 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
             onContextMenu={onContextMenu}>
             {size.x != 0 && (
                 <>
-                    <div
-                        className="grid"
-                        style={{
-                            backgroundPositionX: `calc(50% + ${offset.x}px + ${
-                                (gridSize * scale) / 2
-                            }px)`,
-                            backgroundPositionY: `calc(50% + ${-offset.y}px + ${
-                                (gridSize * scale) / 2
-                            }px)`,
-                            backgroundSize: `${gridSize * scale}px ${gridSize * scale}px`,
-                        }}
-                    />
+                    <Grid offset={offset} scale={scale} gridSize={gridSize} />
                     <XAxis
                         containerSize={size}
                         offset={offset}
@@ -96,12 +86,4 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
 const styles = mergeStyles({
     overflow: "hidden",
     position: "relative",
-    ".grid": {
-        position: "absolute",
-        width: "100%",
-        height: "100%",
-        backgroundImage: `
-            linear-gradient(to right, grey 1px, transparent 1px),
-            linear-gradient(to bottom, grey 1px, transparent 1px)`,
-    },
 });

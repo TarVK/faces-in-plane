@@ -12,7 +12,8 @@ export const XAxis: FC<IAxisProps> = ({containerSize, offset, scale, spacing}) =
         i++
     ) {
         const x = i * s;
-        const val = i * spacing - start + "";
+        const valNum = i * spacing - start;
+        const val = formatNumber(valNum);
         labels.push(
             <div
                 key={i}
@@ -32,13 +33,31 @@ export const XAxis: FC<IAxisProps> = ({containerSize, offset, scale, spacing}) =
         <div
             className="xAxis"
             style={{
-                top: containerSize.y / 2 - offset.y,
                 position: "absolute",
                 left: 0,
                 right: 0,
-                borderTop: "2px solid black",
             }}>
-            {labels}
+            <div
+                style={{
+                    top: containerSize.y / 2 - offset.y,
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    borderTop: "1px solid grey",
+                }}></div>
+            <div
+                style={{
+                    top: Math.max(
+                        0,
+                        Math.min(containerSize.y - 20, containerSize.y / 2 - offset.y)
+                    ),
+                    position: "absolute",
+                    borderTop: "1px solid transparent",
+                    left: 0,
+                    right: 0,
+                }}>
+                {labels}
+            </div>
         </div>
     );
 };
@@ -55,7 +74,7 @@ export const YAxis: FC<IAxisProps> = ({containerSize, offset, scale, spacing}) =
     ) {
         const y = i * s;
         const valNum = i * spacing - start;
-        const val = valNum + "";
+        const val = formatNumber(valNum);
 
         if (valNum != 0)
             labels.push(
@@ -78,13 +97,35 @@ export const YAxis: FC<IAxisProps> = ({containerSize, offset, scale, spacing}) =
         <div
             className="yAxis"
             style={{
-                left: containerSize.x / 2 + offset.x,
                 position: "absolute",
                 top: 0,
                 bottom: 0,
-                borderRight: "2px solid black",
             }}>
-            {labels}
+            <div
+                style={{
+                    left: containerSize.x / 2 + offset.x,
+                    position: "absolute",
+                    top: 0,
+                    bottom: 0,
+                    borderRight: "1px solid grey",
+                }}></div>
+            <div
+                style={{
+                    left: Math.max(
+                        40,
+                        Math.min(containerSize.x, containerSize.x / 2 + offset.x)
+                    ),
+                    position: "absolute",
+                    borderRight: "1px solid transparent",
+                    top: 0,
+                    bottom: 0,
+                }}>
+                {labels}
+            </div>
         </div>
     );
 };
+
+function formatNumber(val: number): string {
+    return Math.round(val * 1e10) / 1e10 + "";
+}

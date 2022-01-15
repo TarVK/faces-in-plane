@@ -29,9 +29,31 @@ export class GeometryEditorState {
      * @returns The distance between lines on the grid, in world units
      */
     public getGridSize(hook?: IDataHook): number {
+        // const {scale} = this.transformation.get(hook);
+        // const desiredPixelSpacing = 50; // TODO: add setting
+        // return (1 / Math.pow(2, Math.round(Math.log2(scale)))) * desiredPixelSpacing;
+
         const {scale} = this.transformation.get(hook);
-        const desiredPixelSpacing = 50; // TODO: add setting
-        return (1 / Math.pow(2, Math.round(Math.log2(scale)))) * desiredPixelSpacing;
+
+        // TODO: make configurarable
+        const desiredSpacing = {
+            pixels: 50, // The minimum number of pixels between lines in the grid on the screen
+            units: 100, // The base units on the screen
+        };
+
+        const baseScale = desiredSpacing.units / desiredSpacing.pixels;
+        const relScale = scale * baseScale;
+        const baseFactor = baseScale / Math.pow(10, Math.floor(Math.log10(relScale)));
+
+        // Try to subdivide the factor further
+        let factor = baseFactor;
+        if (factor * 0.2 * scale > 1) {
+            factor *= 0.2;
+        } else if (factor * 0.5 * scale > 1) {
+            factor *= 0.5;
+        }
+
+        return factor * desiredSpacing.pixels;
     }
 
     // Transformation related methods
