@@ -171,7 +171,6 @@ function getContinuationsThroughPoint<F extends IFace<any>>(
 ): IBoundary<F>[] {
     const cutOff: IBoundary<F>[] = [];
 
-    let prevInterval: IInterval<F> = intervals[0];
     const endIntervals = intervals.slice(1);
     for (let interval of endIntervals) {
         const left = interval.left;
@@ -184,15 +183,8 @@ function getContinuationsThroughPoint<F extends IFace<any>>(
                     start: point,
                 };
                 cutOff.push(newBoundary);
-
-                prevInterval.right = interval.left = {
-                    ...left,
-                    end: point,
-                };
             }
         }
-
-        prevInterval = interval;
     }
     return cutOff;
 }
