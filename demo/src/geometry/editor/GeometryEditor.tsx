@@ -1,89 +1,130 @@
 import {mergeStyles} from "@fluentui/react";
-import {useDataHook} from "model-react";
+import {IPoint} from "face-combiner";
+import {Field, useDataHook} from "model-react";
 import React, {FC, useCallback, useState} from "react";
 import {useRef} from "react";
-import {XAxis, YAxis} from "./Axes";
-import {Grid} from "./Grid";
+import {getDistance} from "../getDistance";
+import {EditorPlane} from "./grid/EditorPlane";
+import {Polygons} from "./shapes/Polygons";
+import {EditorSidebar} from "./sidebar/EditorSidebar";
 import {IGeometryEditorProps} from "./_types/IGeometryEditorProps";
+import {IInteractionHandler} from "./_types/IInteractionHandler";
 
 export const GeometryEditor: FC<IGeometryEditorProps> = ({
     state,
     width = "100%",
     height = "100%",
 }) => {
-    const [h] = useDataHook();
-    const [size, setSize] = useState<{x: number; y: number}>({x: 0, y: 0});
+    const mousePos = useRef<Field<IPoint>>();
+    if (!mousePos.current) mousePos.current = new Field({x: 0, y: 0});
 
-    const setContainer = useCallback((container: HTMLDivElement | null) => {
-        if (container) {
-            const rect = container.getBoundingClientRect();
-            setSize({x: rect.width, y: rect.height});
-        }
-    }, []);
-    const onMouseDrag = useCallback((evt: React.MouseEvent<HTMLDivElement>) => {
-        if (evt.buttons == 2) state.translate(evt.movementX, -evt.movementY);
-    }, []);
-    const onContextMenu = useCallback((evt: React.MouseEvent<HTMLDivElement>) => {
-        evt.preventDefault();
-    }, []);
-    const onMouseDown = useCallback((evt: React.MouseEvent<HTMLDivElement>) => {}, []);
+    const addPoint = useCallback(
+        (point: IPoint) => {
+            const {scale} = state.getTransformation();
+            const nearPoint = state.findNearestSelectionPoint(point)?.point;
+            const dist = nearPoint ? getDistance(nearPoint, point) * scale : Infinity;
 
-    const onWheel = useCallback((evt: React.WheelEvent<HTMLDivElement>) => {
-        // TODO: also handle pinch events: https://stackoverflow.com/a/11183333/8521718
-        const dir = evt.deltaY < 0 ? -1 : evt.deltaY > 0 ? 1 : 0;
-        if (dir != 0) {
-            const el = evt.target as HTMLDivElement;
-            const elBox = el.getBoundingClientRect();
+            // TODO: make it a non-arbitrary value
+            if (dist < 20) state.deselectPolygon();
+            else state.addPoint(point);
 
-            const pos = {
-                x: evt.clientX - elBox.x - elBox.width / 2,
-                y: elBox.height - (evt.clientY - elBox.y) - elBox.height / 2,
-            };
+            console.log(dist < 20);
+            console.log(state.getPolygons().map(polygon => polygon.get()));
+        },
+        [state]
+    );
+    const selectPolygon = useCallback(
+        (point: IPoint) => {
+            const selected = state.getSelectedPolygon();
+            const newSelected = state.findIntersectingPolygon(point, selected);
+            if (newSelected) state.selectPolygon(newSelected);
+            else state.deselectPolygon();
+        },
+        [state]
+    );
+    const selectPoint = useCallback(
+        (point: IPoint) => {
+            const currentIndex = state.getSelectedPointIndex();
+            const closestPoint = state.findNearestSelectionPoint(point, currentIndex);
+            if (!closestPoint) return false;
 
-            const zoomSpeed = 0.9; // TODO: make adjustable
-            const oldScale = state.getTransformation().scale;
-            const newScale = dir > 0 ? oldScale / zoomSpeed : oldScale * zoomSpeed;
+            const dist = getDistance(closestPoint.point, point);
+            if (dist < 20) {
+                state.selectPolygonPoint(closestPoint.index);
+                return true;
+            }
+            return false;
+        },
+        [state]
+    );
+    const movePoint = useCallback(
+        (point: IPoint) => {
+            const currentIndex = state.getSelectedPointIndex();
+            if (currentIndex == undefined) return false;
 
-            state.scaleAt(newScale, pos);
-        }
-    }, []);
+            state.movePoint(point);
+            return true;
+        },
+        [state]
+    );
+    const movePolygon = useCallback(
+        (delta: IPoint) => {
+            state.movePolygon(delta);
+        },
+        [state]
+    );
 
-    const {offset, scale} = state.getTransformation(h);
-    const gridSize = state.getGridSize(h);
+    const onClick = useCallback<IInteractionHandler>(
+        (evt, point) => {
+            const tool = state.getSelectedTool();
+            if (evt.button == 0)
+                if (tool == "create") {
+                    addPoint(point);
+                } else {
+                    const selectedPoint = selectPoint(point);
+                    if (!selectedPoint) selectPolygon(point);
+                }
+        },
+        [state]
+    );
+
+    const onMouseMove = useCallback<IInteractionHandler>(
+        (evt, point, delta) => {
+            mousePos.current?.set(point);
+            if (evt.buttons == 1) {
+                const tool = state.getSelectedTool();
+                if (tool == "edit") {
+                    const movedPoint = movePoint(point);
+                    if (!movedPoint) movePolygon(delta);
+                }
+            }
+        },
+        [state]
+    );
+
     return (
         <div
-            ref={setContainer}
-            className={styles}
+            className={style}
             style={{
                 width,
                 height,
-            }}
-            onMouseDown={onMouseDown}
-            onMouseMove={onMouseDrag}
-            onWheel={onWheel}
-            onContextMenu={onContextMenu}>
-            {size.x != 0 && (
-                <>
-                    <Grid offset={offset} scale={scale} gridSize={gridSize} />
-                    <XAxis
-                        containerSize={size}
-                        offset={offset}
-                        scale={scale}
-                        spacing={gridSize}
-                    />
-                    <YAxis
-                        containerSize={size}
-                        offset={offset}
-                        scale={scale}
-                        spacing={gridSize}
-                    />
-                </>
-            )}
+            }}>
+            <EditorSidebar state={state} />
+            <EditorPlane
+                width={width}
+                height={height}
+                state={state}
+                onMouseDown={onClick}
+                onMouseMove={onMouseMove}>
+                <Polygons state={state} mousePos={mousePos.current} />
+            </EditorPlane>
         </div>
     );
 };
 
-const styles = mergeStyles({
-    overflow: "hidden",
-    position: "relative",
+const style = mergeStyles({
+    display: "flex",
+    ".plane": {
+        flexGrow: 1,
+    },
 });

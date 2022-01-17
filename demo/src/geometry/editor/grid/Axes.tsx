@@ -1,5 +1,5 @@
 import React, {FC} from "react";
-import {IAxisProps} from "./_types/IAxisProps";
+import {IAxisProps} from "../_types/IAxisProps";
 
 export const XAxis: FC<IAxisProps> = ({containerSize, offset, scale, spacing}) => {
     const labels = [];

@@ -71,7 +71,7 @@ export class TrapezoidalDecomposition<T> {
                     if (
                         point.x > node.point.x ||
                         //Apply symbolic shear transformation:
-                        (point.x == node.point.x && point.y > node.point.y)
+                        (point.x == node.point.x && point.y >= node.point.y)
                     )
                         node = node.right;
                     else node = node.left;
@@ -86,7 +86,7 @@ export class TrapezoidalDecomposition<T> {
                 } else if (isPointNode(node)) {
                     if (
                         os.start.x > node.point.x ||
-                        (os.start.x == node.point.x && os.start.y > node.point.y)
+                        (os.start.x == node.point.x && os.start.y >= node.point.y)
                     )
                         node = node.right;
                     else node = node.left;
