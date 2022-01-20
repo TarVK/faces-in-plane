@@ -1,14 +1,14 @@
 import {mergeStyles} from "@fluentui/react";
 import {IPoint} from "face-combiner";
 import {Field, useDataHook} from "model-react";
-import React, {FC, useCallback, useState} from "react";
+import React, {FC, useCallback, useEffect, useState} from "react";
 import {useRef} from "react";
 import {getDistance} from "../getDistance";
 import {EditorPlane} from "./grid/EditorPlane";
 import {Polygons} from "./shapes/Polygons";
 import {EditorSidebar} from "./sidebar/EditorSidebar";
 import {IGeometryEditorProps} from "./_types/IGeometryEditorProps";
-import {IInteractionHandler} from "./_types/IInteractionHandler";
+import {IInteractionHandler} from "./grid/_types/IInteractionHandler";
 
 export const GeometryEditor: FC<IGeometryEditorProps> = ({
     state,
@@ -20,16 +20,21 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
 
     const addPoint = useCallback(
         (point: IPoint) => {
-            const {scale} = state.getTransformation();
-            const nearPoint = state.findNearestSelectionPoint(point)?.point;
-            const dist = nearPoint ? getDistance(nearPoint, point) * scale : Infinity;
+            const targetPoint = state.snap(point);
 
-            // TODO: make it a non-arbitrary value
-            if (dist < 20) state.deselectPolygon();
-            else state.addPoint(point);
+            const polygon = state.getSelectedPolygon()?.polygon;
+            if (polygon != undefined) {
+                const index = state.getSelectedPointIndex() ?? polygon.length - 1;
+                const nextPoint = polygon[(index + 1) % polygon.length];
+                const dist = getDistance(targetPoint, nextPoint);
 
-            console.log(dist < 20);
-            console.log(state.getPolygons().map(polygon => polygon.get()));
+                if (dist == 0) {
+                    state.deselectPolygon();
+                    return;
+                }
+            }
+
+            state.addPoint(targetPoint);
         },
         [state]
     );
@@ -74,8 +79,10 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
         [state]
     );
 
+    const didSelectPointOnClick = useRef(false);
     const onClick = useCallback<IInteractionHandler>(
         (evt, point) => {
+            didSelectPointOnClick.current = false;
             const tool = state.getSelectedTool();
             if (evt.button == 0)
                 if (tool == "create") {
@@ -83,6 +90,7 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
                 } else {
                     const selectedPoint = selectPoint(point);
                     if (!selectedPoint) selectPolygon(point);
+                    else didSelectPointOnClick.current = true;
                 }
         },
         [state]
@@ -94,9 +102,25 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
             if (evt.buttons == 1) {
                 const tool = state.getSelectedTool();
                 if (tool == "edit") {
-                    const movedPoint = movePoint(point);
-                    if (!movedPoint) movePolygon(delta);
+                    const movedPoint = didSelectPointOnClick.current && movePoint(point);
+                    // if (!movedPoint) movePolygon(delta);
                 }
+            }
+        },
+        [state]
+    );
+
+    const onKeyDown = useCallback(
+        (event: KeyboardEvent) => {
+            if (event.key == "Escape") state.deselectPolygon();
+            if (event.key == "Delete" || event.key == "Backspace" || event.key == "d") {
+                if (state.getSelectedPoint()) state.deletePoint();
+                else state.deletePolygon();
+            }
+            if (event.key == "t") {
+                const tools = ["edit", "create"] as const;
+                const index = tools.indexOf(state.getSelectedTool());
+                state.setSelectedTool(tools[(index + 1) % tools.length]);
             }
         },
         [state]
@@ -115,7 +139,8 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
                 height={height}
                 state={state}
                 onMouseDown={onClick}
-                onMouseMove={onMouseMove}>
+                onMouseMove={onMouseMove}
+                onKeyDown={onKeyDown}>
                 <Polygons state={state} mousePos={mousePos.current} />
             </EditorPlane>
         </div>

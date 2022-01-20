@@ -3,6 +3,7 @@ import {DataCacher, Field, IDataHook} from "model-react";
 import {getDistance} from "../getDistance";
 import {isPointInAABB} from "../isPointInAABB";
 import {isPointInPolygon} from "../isPointInPolygon";
+import {projectPointOnLine} from "../projectPointOnLine";
 import {IBoundingBox} from "../_types/IBoundingBox";
 import {IEditorConfig} from "./_types/IEditorConfig";
 import {IEditorFace} from "./_types/IEditorFace";
@@ -49,11 +50,18 @@ export class GeometryEditorState {
         grid: "minor",
         showAxis: true,
         snap: {
-            grid: "minor",
+            gridMajor: true,
+            gridMinor: true,
             lines: true,
             points: true,
+            disableAll: false,
         },
-        snapDistance: 20,
+        snapDistance: {
+            gridMajor: 10,
+            gridMinor: 5,
+            lines: 15,
+            points: 10,
+        },
         zoomSpeed: 0.1,
     });
 
@@ -351,7 +359,7 @@ export class GeometryEditorState {
      * @param point The new position of the point
      */
     public movePoint(point: IPoint): void {
-        const snappedPoint = this.snapToGrid(point, true);
+        const snappedPoint = this.snap(point);
         this.updatePolygon((face, index) => {
             if (index == undefined) return face;
             const newPoints = [
@@ -386,9 +394,9 @@ export class GeometryEditorState {
             ]);
         }
 
-        const snappedPoint = this.snapToGrid(point, true);
+        const snappedPoint = this.snap(point);
         this.updatePolygon((face, index) => {
-            if (index == undefined) index = face.polygon.length;
+            if (index == undefined) index = face.polygon.length - 1;
             const newPoints = [
                 ...face.polygon.slice(0, index + 1),
                 snappedPoint,
@@ -506,23 +514,112 @@ export class GeometryEditorState {
     /**
      * Snaps the given point to the grid depending on the selected sensitivity
      * @param point The point to be snapped
-     * @param onlyIfEnalbed Whether to not snap in case the user disabled snapping
+     * @param settings The settings to use for the snapping
      * @returns The snapped point
      */
-    public snapToGrid(point: IPoint, onlyIfEnalbed?: boolean): IPoint {
-        // TODO: add a setting to disable snapping and change sensitivity
+    public snap(
+        point: IPoint,
+        settings?: {
+            snap: IEditorConfig["snap"];
+            snapDistance: IEditorConfig["snapDistance"];
+        }
+    ): IPoint {
+        settings = settings ?? this.getConfig();
+        if (settings.snap.disableAll) return point;
 
-        // Obtain closest point on the grid
-        const gridline = this.getGridSize() / 5;
-        const snapPoint = {
-            x: Math.round(point.x / gridline) * gridline,
-            y: Math.round(point.y / gridline) * gridline,
+        const scale = this.getTransformation().scale;
+
+        let selectedPoint: IPoint | undefined | false = false;
+        const getSelectedPoint = () => {
+            if (selectedPoint == false) {
+                selectedPoint = this.getSelectedPoint();
+                if (!selectedPoint) {
+                    const selectedPolygon = this.getSelectedPolygon()?.polygon;
+                    if (selectedPolygon)
+                        selectedPoint = selectedPolygon[selectedPolygon.length - 1];
+                }
+            }
+            return selectedPoint;
         };
 
-        // Check the distance
-        const dist = getDistance(snapPoint, point);
-        const pixelDist = dist * this.getTransformation().scale;
-        if (pixelDist < this.getConfig().snapDistance) return snapPoint;
-        else return point;
+        // Snap to any polygon point that's in range
+        if (settings.snap.points) {
+            const snapDistance = settings.snapDistance.points / scale; // Adjusted for view space
+            const selectedPoint = getSelectedPoint();
+            const snapPoint = this.polygons
+                .get()
+                .flatMap(face => face.get().polygon)
+                .reduce(
+                    (cur, p) => {
+                        if (p == selectedPoint) return cur; // Skip the selected point
+
+                        const d = getDistance(p, point);
+                        if (d < cur.dist) return {dist: d, best: p};
+                        return cur;
+                    },
+                    {dist: snapDistance, best: null}
+                );
+
+            if (snapPoint.best) return {...snapPoint.best};
+        }
+
+        // Snap to any polygon line that's in range
+        if (settings.snap.lines) {
+            const snapDistance = settings.snapDistance.lines / scale; // Adjusted for view space
+            const selectedPoint = getSelectedPoint();
+            const snapPoint = this.polygons.get().reduce(
+                (cur, face) => {
+                    const points = face.get().polygon;
+                    const faceBest = points.reduce(
+                        ({dist, best, prev}, p) => {
+                            if (p == selectedPoint || prev == selectedPoint)
+                                return {dist, best, prev: p}; // Skip the selected point
+
+                            const lineProjection = projectPointOnLine(point, {
+                                start: p,
+                                end: prev,
+                            });
+
+                            const d = getDistance(lineProjection, point);
+                            if (d < dist) return {dist: d, best: lineProjection, prev: p};
+                            return {dist, best, prev: p};
+                        },
+                        {dist: snapDistance, best: null, prev: points[points.length - 1]}
+                    );
+                    if (faceBest.dist < cur.dist) return faceBest;
+                    return cur;
+                },
+                {dist: snapDistance, best: null}
+            );
+
+            if (snapPoint.best) return {...snapPoint.best};
+        }
+
+        // Snap to any point on the grid
+        if (settings.snap.gridMajor) {
+            const majorSnapDistance = settings.snapDistance.gridMajor / scale; // Adjusted for view space
+            const gridline = this.getGridSize();
+            const snapPoint = {
+                x: Math.round(point.x / gridline) * gridline,
+                y: Math.round(point.y / gridline) * gridline,
+            };
+
+            const dist = getDistance(snapPoint, point);
+            if (dist < majorSnapDistance) return {...snapPoint};
+        }
+
+        if (settings.snap.gridMinor) {
+            const minorSnapDistance = settings.snapDistance.gridMinor / scale; // Adjusted for view space
+            const gridline = this.getGridSize() / 5;
+            const snapPoint = {
+                x: Math.round(point.x / gridline) * gridline,
+                y: Math.round(point.y / gridline) * gridline,
+            };
+
+            const dist = getDistance(snapPoint, point);
+            if (dist < minorSnapDistance) return {...snapPoint};
+        }
+
+        return point;
     }
 }

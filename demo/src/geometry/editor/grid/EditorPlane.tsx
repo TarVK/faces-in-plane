@@ -1,9 +1,10 @@
+import {IPoint} from "face-combiner";
 import {useDataHook} from "model-react";
-import React, {FC, useCallback, useState} from "react";
+import React, {FC, useCallback, useEffect, useState} from "react";
 import {useRef} from "react";
 import {XAxis, YAxis} from "./Axes";
 import {Grid} from "./Grid";
-import {IEditorPlaneProps} from "../_types/IEditorPlaneProps";
+import {IEditorPlaneProps} from "./_types/IEditorPlaneProps";
 
 export const EditorPlane: FC<IEditorPlaneProps> = ({
     children,
@@ -13,13 +14,32 @@ export const EditorPlane: FC<IEditorPlaneProps> = ({
     onMouseDown: onMouseDownHandler,
     onMouseUp: onMouseUpHandler,
     onMouseMove: onMouseMoveHandler,
+    onKeyDown: onKeyDownHandler,
+    onKeyUp: onKeyUpHandler,
 }) => {
     const [h] = useDataHook();
     const [size, setSize] = useState<{x: number; y: number}>({x: 0, y: 0});
     const containerRef = useRef<HTMLDivElement>();
 
-    const getEventData = useCallback((evt: React.MouseEvent<HTMLDivElement>) => {
+    const getWorldPoint = useCallback((point: IPoint, el: HTMLDivElement) => {
         const {offset, scale} = state.getTransformation();
+        const elBox = el.getBoundingClientRect();
+        const screenspacePoint = {
+            x: point.x - elBox.x - elBox.width / 2,
+            y: elBox.height - (point.y - elBox.y) - elBox.height / 2,
+        };
+        return {
+            x: (screenspacePoint.x - offset.x) / scale,
+            y: (screenspacePoint.y - offset.y) / scale,
+            inPlane:
+                elBox.x <= point.x &&
+                elBox.y <= point.y &&
+                elBox.x + elBox.width >= point.x &&
+                elBox.y + elBox.height >= point.y,
+        };
+    }, []);
+    const getEventData = useCallback((evt: React.MouseEvent<HTMLDivElement>) => {
+        const {scale} = state.getTransformation();
         const delta = {
             x: evt.movementX / scale,
             y: -evt.movementY / scale,
@@ -31,15 +51,7 @@ export const EditorPlane: FC<IEditorPlaneProps> = ({
                 worldDelta: delta,
             };
 
-        const elBox = el.getBoundingClientRect();
-        const screenspacePoint = {
-            x: evt.clientX - elBox.x - elBox.width / 2,
-            y: elBox.height - (evt.clientY - elBox.y) - elBox.height / 2,
-        };
-        const worldspacePoint = {
-            x: (screenspacePoint.x - offset.x) / scale,
-            y: (screenspacePoint.y - offset.y) / scale,
-        };
+        const worldspacePoint = getWorldPoint({x: evt.clientX, y: evt.clientY}, el);
 
         return {
             worldPoint: worldspacePoint,
@@ -52,6 +64,16 @@ export const EditorPlane: FC<IEditorPlaneProps> = ({
             const rect = container.getBoundingClientRect();
             setSize({x: rect.width, y: rect.height});
             containerRef.current = container;
+
+            // Move the plane to foxus on the top right quadrant
+            const {scale} = state.getTransformation();
+            state.setTransformation({
+                offset: {
+                    x: (-rect.width / 2) * 0.8,
+                    y: (-rect.height / 2) * 0.8,
+                },
+                scale: scale,
+            });
         }
     }, []);
     const onMouseDrag = useCallback(
@@ -106,6 +128,39 @@ export const EditorPlane: FC<IEditorPlaneProps> = ({
             state.scaleAt(newScale, pos);
         }
     }, []);
+
+    useEffect(() => {
+        const getMouseData = () => {
+            if (!containerRef.current) return;
+            const worldPoint = getWorldPoint(mousePosition, containerRef.current);
+            if (!worldPoint.inPlane) return;
+            return worldPoint;
+        };
+        const downHandler = (event: KeyboardEvent) => {
+            const mousePoint = getMouseData();
+            if (mousePoint) onKeyDownHandler?.(event, mousePoint);
+        };
+        const upHandler = (event: KeyboardEvent) => {
+            const mousePoint = getMouseData();
+            if (mousePoint) onKeyUpHandler?.(event, mousePoint);
+        };
+
+        let mousePosition = {x: 0, y: 0};
+        const mouseHandler = (mouseMoveEvent: MouseEvent) => {
+            mousePosition.x = mouseMoveEvent.pageX;
+            mousePosition.y = mouseMoveEvent.pageY;
+        };
+
+        if (onKeyDownHandler || onKeyUpHandler)
+            window.addEventListener("mousemove", mouseHandler, false);
+        if (onKeyDownHandler) window.addEventListener("keydown", downHandler);
+        if (onKeyUpHandler) window.addEventListener("keyup", upHandler);
+        return () => {
+            window.removeEventListener("mousemove", mouseHandler);
+            window.removeEventListener("keydown", downHandler);
+            window.removeEventListener("keyup", upHandler);
+        };
+    }, [onKeyDownHandler, onKeyUpHandler]);
 
     const {offset, scale} = state.getTransformation(h);
     const gridSize = state.getGridSize(h);

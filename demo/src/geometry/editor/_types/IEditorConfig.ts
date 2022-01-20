@@ -36,15 +36,28 @@ export type IEditorConfig = {
     // Interaction
     /** What points to snap to */
     snap: {
-        /** What parts of the grid can be snapped to */
-        grid: "none" | "major" | "minor";
+        /** Whether to snap to major grid points */
+        gridMajor: boolean;
+        /** Whether to snap to minor grid points */
+        gridMinor: boolean;
         /** Whether to snap to be on nearby lines */
         lines: boolean;
         /** Whether to snap to be on nearby points */
         points: boolean;
+        /** Whether to disable all snapping, this overrides the other options */
+        disableAll: boolean;
     };
     /** The distance that can be snapped over */
-    snapDistance: number;
+    snapDistance: {
+        /** How far may be snapped on major grid points */
+        gridMajor: number;
+        /** How far may be snapped on minor grid points */
+        gridMinor: number;
+        /** How far may be snapped on lines */
+        lines: number;
+        /** How far may be snapped on points */
+        points: number;
+    };
     /** How quickly to zoom in and out (0-1) */
     zoomSpeed: number;
 };

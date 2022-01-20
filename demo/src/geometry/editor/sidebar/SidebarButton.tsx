@@ -3,6 +3,7 @@ import {
     ITooltipHostStyles,
     TooltipHost,
     DirectionalHint,
+    TooltipDelay,
 } from "@fluentui/react";
 import {useId} from "@fluentui/react-hooks";
 import React, {FC} from "react";
@@ -17,18 +18,22 @@ export const SidebarButton: FC<ISidebarButtonProps> = ({
     title,
     onClick,
     selected,
+    hoverDirection = DirectionalHint.rightCenter,
 }) => {
-    const tooltipId = useId(icon);
+    const stringIcon = typeof icon == "string";
+    const tooltipId = useId(stringIcon ? icon : title);
 
     return (
         <TooltipHost
             content={hover}
             id={tooltipId}
             calloutProps={calloutProps}
-            directionalHint={DirectionalHint.rightCenter}
+            delay={TooltipDelay.long}
+            directionalHint={hoverDirection}
             styles={hostStyles}>
             <IconButton
-                iconProps={{iconName: icon}}
+                iconProps={stringIcon ? {iconName: icon} : undefined}
+                onRenderIcon={stringIcon ? undefined : () => icon}
                 ariaLabel={title}
                 onClick={onClick}
                 checked={selected}

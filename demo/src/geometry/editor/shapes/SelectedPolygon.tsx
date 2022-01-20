@@ -25,7 +25,7 @@ export const SelectedPolygon: FC<ISelectedPolygonProps> = ({state, mousePos}) =>
 
         const newPoints = [
             ...face.polygon.slice(0, selectedPointIndex + 1),
-            mousePos.get(h),
+            state.snap(mousePos.get(h)),
             ...face.polygon.slice(selectedPointIndex + 1),
         ];
         newFace = {...face, polygon: newPoints};
