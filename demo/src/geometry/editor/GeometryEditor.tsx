@@ -9,6 +9,8 @@ import {Polygons} from "./shapes/Polygons";
 import {EditorSidebar} from "./sidebar/EditorSidebar";
 import {IGeometryEditorProps} from "./_types/IGeometryEditorProps";
 import {IInteractionHandler} from "./grid/_types/IInteractionHandler";
+import {useEditor} from "../../useEditor";
+import {GeometryCodeEditor} from "./geometryCodeEditor/GeometryCodeEditor";
 
 export const GeometryEditor: FC<IGeometryEditorProps> = ({
     state,
@@ -133,9 +135,10 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
                 width,
                 height,
             }}>
+            <GeometryCodeEditor state={state} />
             <EditorSidebar state={state} />
             <EditorPlane
-                width={width}
+                width={"auto"}
                 height={height}
                 state={state}
                 onMouseDown={onClick}

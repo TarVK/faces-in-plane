@@ -152,7 +152,7 @@ export const EditorPlane: FC<IEditorPlaneProps> = ({
         };
 
         if (onKeyDownHandler || onKeyUpHandler)
-            window.addEventListener("mousemove", mouseHandler, false);
+            window.addEventListener("mousemove", mouseHandler);
         if (onKeyDownHandler) window.addEventListener("keydown", downHandler);
         if (onKeyUpHandler) window.addEventListener("keyup", upHandler);
         return () => {

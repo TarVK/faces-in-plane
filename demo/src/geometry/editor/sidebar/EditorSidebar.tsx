@@ -109,6 +109,12 @@ export const EditorSidebar: FC<{state: GeometryEditorState}> = ({state}) => {
 
             {/* Extra settings */}
             <div style={{height: 50}} />
+            <SidebarButton
+                icon="Code"
+                hover="Show json editor"
+                title="Show json editor"
+                onClick={() => console.log("shit")}
+            />
             <SnapControls state={state} />
             <SidebarButton
                 icon={
