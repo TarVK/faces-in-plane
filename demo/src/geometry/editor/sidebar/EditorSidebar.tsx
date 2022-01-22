@@ -1,5 +1,5 @@
 import {DirectionalHint, FontIcon, getTheme, Slider} from "@fluentui/react";
-import {useDataHook} from "model-react";
+import {Field, useDataHook} from "model-react";
 import {config} from "process";
 import React, {FC, useCallback} from "react";
 import {GeometryEditorState} from "../GeometryEditorState";
@@ -9,7 +9,10 @@ import {ExpandableSidebarButton} from "./ExpandableSidebarButton";
 import {SidebarButton} from "./SidebarButton";
 import {SnapControls} from "./SnapControls";
 
-export const EditorSidebar: FC<{state: GeometryEditorState}> = ({state}) => {
+export const EditorSidebar: FC<{
+    state: GeometryEditorState;
+    readonly?: boolean;
+}> = ({state, readonly}) => {
     const [h] = useDataHook();
     const updateConfig = useCallback(
         (getNewConfig: (cfg: IEditorConfig) => IEditorConfig) => {
@@ -76,36 +79,40 @@ export const EditorSidebar: FC<{state: GeometryEditorState}> = ({state}) => {
                 title="Deselect point"
                 onClick={() => state.deselectPoint()}
             />
-            <SidebarButton
-                icon={
-                    <>
-                        <FontIcon aria-label="Polygon" iconName="TriangleShape" />
-                        <FontIcon
-                            aria-label="Delete"
-                            iconName="Delete"
-                            style={{fontSize: 10, marginTop: 5}}
-                        />
-                    </>
-                }
-                hover={"Delete the selected polygon (D)"}
-                title="Delete polygon"
-                onClick={() => state.deletePolygon()}
-            />
-            <SidebarButton
-                icon={
-                    <>
-                        <FontIcon aria-label="Point" iconName="LocationDot" />
-                        <FontIcon
-                            aria-label="Delete"
-                            iconName="Delete"
-                            style={{fontSize: 10, marginTop: 5}}
-                        />
-                    </>
-                }
-                hover={"Delete the selected point (D)"}
-                title="Delete polygon"
-                onClick={() => state.deletePoint()}
-            />
+            {!readonly && (
+                <>
+                    <SidebarButton
+                        icon={
+                            <>
+                                <FontIcon aria-label="Polygon" iconName="TriangleShape" />
+                                <FontIcon
+                                    aria-label="Delete"
+                                    iconName="Delete"
+                                    style={{fontSize: 10, marginTop: 5}}
+                                />
+                            </>
+                        }
+                        hover={"Delete the selected polygon (D)"}
+                        title="Delete polygon"
+                        onClick={() => state.deletePolygon()}
+                    />
+                    <SidebarButton
+                        icon={
+                            <>
+                                <FontIcon aria-label="Point" iconName="LocationDot" />
+                                <FontIcon
+                                    aria-label="Delete"
+                                    iconName="Delete"
+                                    style={{fontSize: 10, marginTop: 5}}
+                                />
+                            </>
+                        }
+                        hover={"Delete the selected point (D)"}
+                        title="Delete polygon"
+                        onClick={() => state.deletePoint()}
+                    />
+                </>
+            )}
 
             {/* Extra settings */}
             <div style={{height: 50}} />
@@ -113,7 +120,8 @@ export const EditorSidebar: FC<{state: GeometryEditorState}> = ({state}) => {
                 icon="Code"
                 hover="Show json editor"
                 title="Show json editor"
-                onClick={() => console.log("shit")}
+                onClick={() => state.setCodeEditorVisible(!state.isCodeEditorVisible())}
+                selected={state.isCodeEditorVisible(h)}
             />
             <SnapControls state={state} />
             <SidebarButton

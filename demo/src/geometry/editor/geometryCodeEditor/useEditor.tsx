@@ -1,7 +1,7 @@
 import {loader, useMonaco} from "@monaco-editor/react";
 import {languages, editor, Uri} from "monaco-editor/esm/vs/editor/editor.api";
 import React, {FC, useRef, useEffect, useState, CSSProperties} from "react";
-import {polygonSchema} from "./geometry/editor/geometryCodeEditor/polygonSchema";
+import {polygonSchema} from "./polygonSchema";
 
 /**
  * Returns an editor element, and the editor that was created
@@ -26,6 +26,8 @@ export const useEditor = ({
             const modelUri = monaco.Uri.parse(
                 `a://${Math.round(Math.random() * 1e6)}.json`
             ); // a made up unique URI for our model
+            const model = monaco.editor.createModel(value, "json", modelUri);
+            model.setEOL(editor.EndOfLineSequence.LF);
             const e = (editorRef.current = monaco.editor.create(elementRef.current, {
                 value: value,
                 language: "JSON",
@@ -33,7 +35,7 @@ export const useEditor = ({
                 minimap: {enabled: false},
                 foldingStrategy: "auto",
                 ...options,
-                model: monaco.editor.createModel(value, "json", modelUri),
+                model,
             }));
             monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
                 validate: true,

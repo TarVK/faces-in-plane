@@ -5,4 +5,5 @@ import {GeometryEditorState} from "../GeometryEditorState";
 export type IPolygonsProps = {
     state: GeometryEditorState;
     mousePos: Field<IPoint>;
+    readonly?: boolean;
 };

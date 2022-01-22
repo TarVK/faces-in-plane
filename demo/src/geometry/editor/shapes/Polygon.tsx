@@ -30,16 +30,16 @@ export const PolygonInner: FC<Omit<IPolygonProps, "polygon"> & {face: IEditorFac
     } = state.getConfig(h);
 
     const path = face.polygon.map(({x, y}) => `${x},${-y}`).join(" ");
-    const lineWidth = polygonEdgeSize / scale;
-    const pointSize = polygonPointSize / scale;
+    const lineWidth = (face.edgeSize ?? polygonEdgeSize) / scale;
+    const pointSize = (face.pointSize ?? polygonPointSize) / scale;
     return (
         <g>
             <polygon
                 points={path}
                 fill={face.color ?? polygonColor}
                 stroke={face.edgeColor ?? polygonEdgeColor}
-                fillOpacity={opacity ?? face.trapsarencty ?? polygonOpacity}
-                strokeOpacity={polygonEdgeOpacity}
+                fillOpacity={opacity ?? face.opacity ?? polygonOpacity}
+                strokeOpacity={face.edgeOpacity ?? polygonEdgeOpacity}
                 strokeWidth={lineWidth}
             />
             {pointSize > 0 &&
@@ -49,8 +49,8 @@ export const PolygonInner: FC<Omit<IPolygonProps, "polygon"> & {face: IEditorFac
                         cx={x}
                         cy={-y}
                         r={pointSize}
-                        fillOpacity={polygonPointOpacity}
-                        fill={face.color ?? polygonPointColor}
+                        fillOpacity={face.pointOpacity ?? polygonPointOpacity}
+                        fill={face.pointColor ?? polygonPointColor}
                     />
                 ))}
             {children}

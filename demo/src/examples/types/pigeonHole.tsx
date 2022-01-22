@@ -9,7 +9,6 @@ import {
 } from "office-ui-fabric-react";
 import React, {MutableRefObject, useCallback, useState} from "react";
 import {InlineTex, Tex} from "react-tex";
-import {genList} from "../../util/genList";
 import {br} from "../latex";
 
 const theme = getTheme();
@@ -18,29 +17,6 @@ export const pigeonHole = {
     Comp: ({getCode}: {getCode: MutableRefObject<() => string>}) => {
         const [n, setN] = useState(6);
         const [satisfiable, setSatisfiable] = useState(false);
-        getCode.current = useCallback(() => {
-            const Cn = `(\n${genList(
-                n + 1,
-                j => `    (${genList(n, i => `P${i + 1}-${j + 1}`).join(" || ")})`
-            ).join(" && \n")}\n)`;
-            const Rn = `(\n${genList(
-                n,
-                i =>
-                    `    (\n${genList(
-                        n,
-                        j =>
-                            `        (${genList(
-                                {
-                                    start:
-                                        j + 1 + (satisfiable && i == 0 && j == 0 ? 1 : 0),
-                                    end: n + 1,
-                                },
-                                k => `!(P${i + 1}-${j + 1} && P${i + 1}-${k + 1})`
-                            ).join(" && ")})`
-                    ).join(" && \n")}\n    )`
-            ).join(" && \n")}\n)`;
-            return `${Cn}\n&&\n${Rn}`;
-        }, [n, satisfiable]);
 
         return (
             <>

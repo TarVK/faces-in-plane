@@ -9,18 +9,27 @@ import {IEditorConfig} from "./_types/IEditorConfig";
 import {IEditorFace} from "./_types/IEditorFace";
 import {IEditorTool} from "./_types/IEditorTool";
 import {ITransformation} from "./_types/ITransformation";
+import {
+    VBool,
+    VNumber,
+    VObject,
+    VString,
+    Opt,
+    VEnum,
+} from "../../util/verification/verifiers";
 
 export class GeometryEditorState {
+    protected undoVersion = new Field(0);
     protected polygonData = new Field<
         {
             face: Field<IEditorFace>;
             aabb: DataCacher<IBoundingBox>;
         }[]
     >([]);
-
     protected polygons = new DataCacher<Field<IEditorFace>[]>(h =>
         this.polygonData.get(h).map(({face}) => face)
     );
+    protected showCodeEditor = new Field(false);
 
     protected transformation = new Field<ITransformation>({
         offset: {x: 0, y: 0},
@@ -64,6 +73,14 @@ export class GeometryEditorState {
         },
         zoomSpeed: 0.1,
     });
+
+    /**
+     * Creates a new editor state
+     */
+    public constructor() {
+        const configText = localStorage.getItem("editorConfig");
+        if (configText) this.loadConfig(configText);
+    }
 
     /**
      * Retrieves all the polygons in the editor
@@ -205,6 +222,7 @@ export class GeometryEditorState {
      */
     public setConfig(config: IEditorConfig): void {
         this.config.set(config);
+        localStorage.setItem("editorConfig", JSON.stringify(config));
     }
 
     /**
@@ -214,6 +232,85 @@ export class GeometryEditorState {
      */
     public getConfig(hook?: IDataHook): IEditorConfig {
         return this.config.get(hook);
+    }
+
+    /**
+     * Tries to load the given string config
+     * @param configText The config to be loaded in json text form
+     */
+    public loadConfig(configText: string): void {
+        try {
+            const configRaw = JSON.parse(configText);
+            const def = this.config.get();
+
+            const verifier = VObject({
+                polygonColor: Opt(VString(), {fallback: def.polygonColor}),
+                polygonEdgeColor: Opt(VString(), {fallback: def.polygonEdgeColor}),
+                polygonPointColor: Opt(VString(), {fallback: def.polygonPointColor}),
+                polygonOpacity: Opt(VNumber({min: 0, max: 1}), {
+                    fallback: def.polygonOpacity,
+                }),
+                polygonEdgeOpacity: Opt(VNumber({min: 0, max: 1}), {
+                    fallback: def.polygonEdgeOpacity,
+                }),
+                polygonPointOpacity: Opt(VNumber({min: 0, max: 1}), {
+                    fallback: def.polygonPointOpacity,
+                }),
+                polygonEdgeSize: Opt(VNumber({min: 0}), {fallback: def.polygonEdgeSize}),
+                polygonPointSize: Opt(VNumber({min: 0}), {
+                    fallback: def.polygonPointSize,
+                }),
+
+                polygonPointSelectSize: Opt(VNumber({min: 0}), {
+                    fallback: def.polygonPointSelectSize,
+                }),
+                polygonPointSelectOpacity: Opt(VNumber({min: 0, max: 1}), {
+                    fallback: def.polygonPointSelectOpacity,
+                }),
+                polygonSelectOpacity: Opt(VNumber({min: 0, max: 1}), {
+                    fallback: def.polygonSelectOpacity,
+                }),
+
+                showAxis: Opt(VBool(), {fallback: def.showAxis}),
+                grid: Opt(VEnum(["none", "major", "minor"] as const), {
+                    fallback: def.grid,
+                }),
+
+                snap: Opt(
+                    VObject({
+                        gridMajor: Opt(VBool(), {fallback: def.snap.gridMajor}),
+                        gridMinor: Opt(VBool(), {fallback: def.snap.gridMinor}),
+                        lines: Opt(VBool(), {fallback: def.snap.lines}),
+                        points: Opt(VBool(), {fallback: def.snap.points}),
+                        disableAll: Opt(VBool(), {fallback: def.snap.disableAll}),
+                    }),
+                    {fallback: def.snap}
+                ),
+
+                snapDistance: Opt(
+                    VObject({
+                        gridMajor: Opt(VNumber({min: 0}), {
+                            fallback: def.snapDistance.gridMajor,
+                        }),
+                        gridMinor: Opt(VNumber({min: 0}), {
+                            fallback: def.snapDistance.gridMinor,
+                        }),
+                        lines: Opt(VNumber({min: 0}), {fallback: def.snapDistance.lines}),
+                        points: Opt(VNumber({min: 0}), {
+                            fallback: def.snapDistance.points,
+                        }),
+                    }),
+                    {fallback: def.snapDistance}
+                ),
+
+                zoomSpeed: Opt(VNumber({min: 0.01, max: 0.5}), {fallback: def.zoomSpeed}),
+            });
+
+            const res = verifier(configRaw);
+            if ("result" in res) {
+                this.setConfig(res.result);
+            }
+        } catch (e) {}
     }
 
     // Tools
@@ -621,5 +718,124 @@ export class GeometryEditorState {
         }
 
         return point;
+    }
+
+    // Text synchronization
+    protected text = new DataCacher(h =>
+        JSON.stringify(
+            this.polygonData.get(h).map(({face}) => face.get(h)),
+            null,
+            4
+        )
+    );
+
+    /**
+     * Retrieves the text representing the current polygon data
+     * @param hook The hook to subscribe to changes
+     */
+    public getText(hook?: IDataHook): string {
+        return this.text.get(hook);
+    }
+
+    /**
+     * Syncrhonizes the current polygons with the given text
+     * @param text The text to synschronize the polygons with
+     * @return Whether the text was correct
+     */
+    public setText(text: string): boolean {
+        const faces = this.verifyStructure(text);
+        if (!faces) return false;
+
+        const selected = this.getSelectedPolygon();
+        if (selected) {
+            const selectIndexPolygon = this.polygonData
+                .get()
+                .findIndex(({face}) => selected == face.get());
+            const selectIndexPoint = this.getSelectedPointIndex();
+            this.setPolygons(faces);
+            const newSelected = faces[selectIndexPolygon];
+            if (newSelected) {
+                this.selectPolygon(newSelected);
+                if (selectIndexPoint != undefined)
+                    this.selectPolygonPoint(selectIndexPoint);
+            }
+        } else {
+            this.setPolygons(faces);
+        }
+
+        return true;
+    }
+
+    /**
+     * Verifies wehtehr the given text has the correct structure
+     * @param text The text to parse
+     * @returns The editor faces or null if there was a syntax error
+     */
+    protected verifyStructure(text: string): IEditorFace[] | null {
+        try {
+            const faces = JSON.parse(text) as IEditorFace[];
+
+            for (let face of faces) {
+                for (let point of face.polygon) {
+                    if (typeof point.x != "number") return null;
+                    if (typeof point.y != "number") return null;
+                }
+                if (face.color != undefined && typeof face.color != "string") return null;
+                if (face.edgeColor != undefined && typeof face.edgeColor != "string")
+                    return null;
+                if (face.pointColor != undefined && typeof face.pointColor != "string")
+                    return null;
+                if (face.opacity != undefined && typeof face.opacity != "number")
+                    return null;
+                if (face.edgeOpacity != undefined && typeof face.edgeOpacity != "number")
+                    return null;
+                if (
+                    face.pointOpacity != undefined &&
+                    typeof face.pointOpacity != "number"
+                )
+                    return null;
+                if (face.edgeSize != undefined && typeof face.edgeSize != "number")
+                    return null;
+                if (face.pointSize != undefined && typeof face.pointSize != "number")
+                    return null;
+                if (face.data == undefined) return null;
+            }
+            return faces;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    /**
+     * Adds an undo breakpoint
+     */
+    public addUndo(): void {
+        this.undoVersion.set(this.undoVersion.get() + 1);
+    }
+
+    /**
+     * Retrieves the undo/redo version of the state
+     * @param hook The hook to subscribe to changes
+     * @returns The new version
+     */
+    public getUndoVersion(hook?: IDataHook): number {
+        return this.undoVersion.get(hook);
+    }
+
+    /**
+     * Retrieves whether the code editor is visible
+     * @param hook The hook to subscribe to changes
+     * @returns Whether the code editor is visible
+     */
+    public isCodeEditorVisible(hook?: IDataHook): boolean {
+        return this.showCodeEditor.get(hook);
+    }
+
+    /**
+     * Sets whether the code editor is visible
+     * @param visible Whether the code editor is visible
+     */
+    public setCodeEditorVisible(visible: boolean): void {
+        this.showCodeEditor.set(visible);
     }
 }

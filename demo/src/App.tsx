@@ -1,6 +1,6 @@
 import {Range, editor as Editor} from "monaco-editor";
 import React, {FC, Suspense, useCallback, useEffect, useRef, useState} from "react";
-import {useEditor} from "./useEditor";
+import {useEditor} from "./geometry/editor/geometryCodeEditor/useEditor";
 import {Stack, StackItem, getTheme, Dropdown, PrimaryButton} from "@fluentui/react";
 import {GeometryEditorState} from "./geometry/editor/GeometryEditorState";
 import {GeometryEditor} from "./geometry/editor/GeometryEditor";
@@ -41,5 +41,14 @@ export const App: FC = () => {
         // ]);
     }
 
-    return <GeometryEditor state={editorState.current} />;
+    return (
+        <div style={{display: "flex", height: "100%"}}>
+            <div style={{flex: 1}}>
+                <GeometryEditor state={editorState.current} />
+            </div>
+            <div style={{flex: 1}}>
+                <GeometryEditor state={editorState.current} readonly />
+            </div>
+        </div>
+    );
 };

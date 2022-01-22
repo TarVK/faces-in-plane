@@ -9,7 +9,6 @@ import {
 } from "office-ui-fabric-react";
 import React, {MutableRefObject, useCallback, useState} from "react";
 import {InlineTex, Tex} from "react-tex";
-import {genList} from "../../util/genList";
 import {br} from "../latex";
 
 const theme = getTheme();
@@ -20,46 +19,6 @@ export const binaryAddition = {
         const [b, setB] = useState(9);
         const [d, setD] = useState(13);
         const [generate, setGenerate] = useState<undefined | "b" | "d">(undefined);
-
-        getCode.current = useCallback(() => {
-            const aS = a.toString(2);
-            const bS = b.toString(2);
-            const dS = d.toString(2);
-            const size =
-                generate == "d"
-                    ? Math.max(aS.length, bS.length) + 1
-                    : generate == "b"
-                    ? Math.max(aS.length, dS.length)
-                    : Math.max(aS.length, bS.length, dS.length);
-
-            const columnConstraints = `(\n${genList(
-                size,
-                i => `    (c${i} <=> a${i} <=> b${i} <=> d${i})`
-            )
-                .reverse()
-                .join(" && \n")}\n)`;
-            const rippleConstraints = `(\n${genList(
-                {start: 1, end: size + 1},
-                i =>
-                    `    (c${i} <=> (a${i - 1} && c${i - 1}) || (b${i - 1} && c${
-                        i - 1
-                    }) || (a${i - 1} && b${i - 1}))`
-            )
-                .reverse()
-                .join(" && \n")}\n) && !c0 && !c${size}`;
-
-            const getNum = (name: string, val: string) =>
-                [...val.padStart(size, "0")]
-                    .reverse()
-                    .map((char, i) => (char == "0" ? "!" : "") + name + i)
-                    .reverse()
-                    .join(" && ");
-
-            const values = `(\n    (${getNum("a", aS)}) ${
-                generate == "b" ? "" : `&&\n    (${getNum("b", bS)})`
-            } ${generate == "d" ? "" : `&&\n    (${getNum("d", dS)})`}\n)`;
-            return `${columnConstraints}\n&&\n${rippleConstraints}\n&&\n${values}`;
-        }, [a, b, d, generate]);
 
         return (
             <>

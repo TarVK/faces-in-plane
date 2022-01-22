@@ -2,6 +2,7 @@ import {IPoint} from "face-combiner";
 import {useDataHook} from "model-react";
 import React, {FC, useCallback, useEffect, useState} from "react";
 import {useRef} from "react";
+import {useWindowSize} from "../../../util/useWindowSize";
 import {XAxis, YAxis} from "./Axes";
 import {Grid} from "./Grid";
 import {IEditorPlaneProps} from "./_types/IEditorPlaneProps";
@@ -54,7 +55,7 @@ export const EditorPlane: FC<IEditorPlaneProps> = ({
         const worldspacePoint = getWorldPoint({x: evt.clientX, y: evt.clientY}, el);
 
         return {
-            worldPoint: worldspacePoint,
+            worldPoint: {x: worldspacePoint.x, y: worldspacePoint.y},
             worldDelta: delta,
         };
     }, []);
@@ -76,6 +77,20 @@ export const EditorPlane: FC<IEditorPlaneProps> = ({
             });
         }
     }, []);
+
+    const editorShown = state.isCodeEditorVisible(h);
+    const windowSize = useWindowSize();
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+        const update = () => {
+            const rect = container.getBoundingClientRect();
+            setSize({x: rect.width, y: rect.height});
+        };
+        update();
+        setTimeout(update); // Requires rerender first
+    }, [windowSize, editorShown]);
+
     const onMouseDrag = useCallback(
         (evt: React.MouseEvent<HTMLDivElement>) => {
             if (evt.buttons == 2) state.translate(evt.movementX, -evt.movementY);

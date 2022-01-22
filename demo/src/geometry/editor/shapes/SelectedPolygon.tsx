@@ -5,7 +5,11 @@ import {Polygon, PolygonInner} from "./Polygon";
 import {IEditorFace} from "../_types/IEditorFace";
 import {ISelectedPolygonProps} from "../_types/ISelectedPolygonProps";
 
-export const SelectedPolygon: FC<ISelectedPolygonProps> = ({state, mousePos}) => {
+export const SelectedPolygon: FC<ISelectedPolygonProps> = ({
+    state,
+    mousePos,
+    readonly,
+}) => {
     const [h] = useDataHook();
     const face = state.getSelectedPolygon(h);
     if (!face) return <></>;
@@ -19,7 +23,7 @@ export const SelectedPolygon: FC<ISelectedPolygonProps> = ({state, mousePos}) =>
     const {scale} = state.getTransformation(h);
 
     let newFace: IEditorFace;
-    if (state.getSelectedTool(h) == "create") {
+    if (state.getSelectedTool(h) == "create" && !readonly) {
         const selectedPointIndex =
             state.getSelectedPointIndex(h) ?? face.polygon.length - 1;
 
@@ -48,7 +52,7 @@ export const SelectedPolygon: FC<ISelectedPolygonProps> = ({state, mousePos}) =>
                 cy={-selectedPoint.y}
                 r={polygonPointSelectSize / scale}
                 fillOpacity={polygonPointSelectOpacity}
-                fill={face.color ?? polygonPointColor}
+                fill={face.pointColor ?? polygonPointColor}
             />
         );
     }

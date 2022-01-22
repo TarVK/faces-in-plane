@@ -1,7 +1,7 @@
 import {mergeStyles} from "@fluentui/react";
 import {IPoint} from "face-combiner";
 import {Field, useDataHook} from "model-react";
-import React, {FC, useCallback, useEffect, useState} from "react";
+import React, {FC, useCallback} from "react";
 import {useRef} from "react";
 import {getDistance} from "../getDistance";
 import {EditorPlane} from "./grid/EditorPlane";
@@ -9,16 +9,18 @@ import {Polygons} from "./shapes/Polygons";
 import {EditorSidebar} from "./sidebar/EditorSidebar";
 import {IGeometryEditorProps} from "./_types/IGeometryEditorProps";
 import {IInteractionHandler} from "./grid/_types/IInteractionHandler";
-import {useEditor} from "../../useEditor";
 import {GeometryCodeEditor} from "./geometryCodeEditor/GeometryCodeEditor";
+import {editor as Editor} from "monaco-editor/esm/vs/editor/editor.api";
 
 export const GeometryEditor: FC<IGeometryEditorProps> = ({
     state,
+    readonly,
     width = "100%",
     height = "100%",
 }) => {
     const mousePos = useRef<Field<IPoint>>();
     if (!mousePos.current) mousePos.current = new Field({x: 0, y: 0});
+    const editorRef = useRef<Editor.IStandaloneCodeEditor>();
 
     const addPoint = useCallback(
         (point: IPoint) => {
@@ -82,18 +84,32 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
     );
 
     const didSelectPointOnClick = useRef(false);
+    const didMovePoint = useRef(false);
     const onClick = useCallback<IInteractionHandler>(
         (evt, point) => {
             didSelectPointOnClick.current = false;
+            didMovePoint.current = false;
             const tool = state.getSelectedTool();
             if (evt.button == 0)
                 if (tool == "create") {
-                    addPoint(point);
+                    if (!readonly) {
+                        addPoint(point);
+                        state.addUndo();
+                    }
                 } else {
                     const selectedPoint = selectPoint(point);
                     if (!selectedPoint) selectPolygon(point);
                     else didSelectPointOnClick.current = true;
                 }
+        },
+        [state, readonly]
+    );
+
+    const onMouseUp = useCallback<IInteractionHandler>(
+        (evt, point) => {
+            if (didMovePoint.current) {
+                state.addUndo();
+            }
         },
         [state]
     );
@@ -105,6 +121,9 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
                 const tool = state.getSelectedTool();
                 if (tool == "edit") {
                     const movedPoint = didSelectPointOnClick.current && movePoint(point);
+                    if (movedPoint) {
+                        didMovePoint.current = true;
+                    }
                     // if (!movedPoint) movePolygon(delta);
                 }
             }
@@ -115,14 +134,33 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
     const onKeyDown = useCallback(
         (event: KeyboardEvent) => {
             if (event.key == "Escape") state.deselectPolygon();
-            if (event.key == "Delete" || event.key == "Backspace" || event.key == "d") {
-                if (state.getSelectedPoint()) state.deletePoint();
-                else state.deletePolygon();
+            if (!readonly) {
+                if (
+                    event.key == "Delete" ||
+                    event.key == "Backspace" ||
+                    event.key == "d"
+                ) {
+                    if (state.getSelectedPoint()) state.deletePoint();
+                    else state.deletePolygon();
+                    state.addUndo();
+                }
             }
             if (event.key == "t") {
                 const tools = ["edit", "create"] as const;
                 const index = tools.indexOf(state.getSelectedTool());
                 state.setSelectedTool(tools[(index + 1) % tools.length]);
+            }
+
+            if (!readonly) {
+                const editor = editorRef.current;
+                if (editor) {
+                    if (event.key == "z" && event.ctrlKey) {
+                        editor.trigger("graphical", "undo", undefined);
+                    }
+                    if (event.key == "y" && event.ctrlKey) {
+                        editor.trigger("graphical", "redo", undefined);
+                    }
+                }
             }
         },
         [state]
@@ -135,16 +173,17 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
                 width,
                 height,
             }}>
-            <GeometryCodeEditor state={state} />
-            <EditorSidebar state={state} />
+            <GeometryCodeEditor state={state} editorRef={editorRef} readonly={readonly} />
+            <EditorSidebar state={state} readonly={readonly} />
             <EditorPlane
                 width={"auto"}
                 height={height}
                 state={state}
                 onMouseDown={onClick}
                 onMouseMove={onMouseMove}
+                onMouseUp={onMouseUp}
                 onKeyDown={onKeyDown}>
-                <Polygons state={state} mousePos={mousePos.current} />
+                <Polygons state={state} mousePos={mousePos.current} readonly={readonly} />
             </EditorPlane>
         </div>
     );
