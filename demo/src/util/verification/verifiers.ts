@@ -12,12 +12,12 @@ export const Opt =
         verifier: IVerifier<T>,
         {
             def = undefined as any,
-            fallback,
+            fb: fallback,
         }: {
             /** An optional defualt value */
             def?: K;
             /** A value to fallback to if there's an error in the actual value */
-            fallback?: K;
+            fb?: K;
         } = {}
     ): IVerifier<T | TIfAny<K, undefined, K>> =>
     (val: any) => {

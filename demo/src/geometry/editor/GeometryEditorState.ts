@@ -17,6 +17,7 @@ import {
     Opt,
     VEnum,
 } from "../../util/verification/verifiers";
+import {IErrorData} from "../../util/verification/_types/IVerifier";
 
 export class GeometryEditorState {
     protected undoVersion = new Field(0);
@@ -237,80 +238,68 @@ export class GeometryEditorState {
     /**
      * Tries to load the given string config
      * @param configText The config to be loaded in json text form
+     * @returns The errors in the provided data
      */
-    public loadConfig(configText: string): void {
+    public loadConfig(configText: string): IErrorData[] | void {
         try {
             const configRaw = JSON.parse(configText);
             const def = this.config.get();
 
+            const OptString = (fb: string) => Opt(VString(), {fb});
+            const OptFraction = (fb: number) => Opt(VNumber({min: 0, max: 1}), {fb});
+            const OptPositiveNum = (fb: number) => Opt(VNumber({min: 0}), {fb});
+            const OptBool = (fb: boolean) => Opt(VBool(), {fb});
+
             const verifier = VObject({
-                polygonColor: Opt(VString(), {fallback: def.polygonColor}),
-                polygonEdgeColor: Opt(VString(), {fallback: def.polygonEdgeColor}),
-                polygonPointColor: Opt(VString(), {fallback: def.polygonPointColor}),
-                polygonOpacity: Opt(VNumber({min: 0, max: 1}), {
-                    fallback: def.polygonOpacity,
-                }),
-                polygonEdgeOpacity: Opt(VNumber({min: 0, max: 1}), {
-                    fallback: def.polygonEdgeOpacity,
-                }),
-                polygonPointOpacity: Opt(VNumber({min: 0, max: 1}), {
-                    fallback: def.polygonPointOpacity,
-                }),
-                polygonEdgeSize: Opt(VNumber({min: 0}), {fallback: def.polygonEdgeSize}),
-                polygonPointSize: Opt(VNumber({min: 0}), {
-                    fallback: def.polygonPointSize,
-                }),
+                polygonColor: OptString(def.polygonColor),
+                polygonEdgeColor: OptString(def.polygonEdgeColor),
+                polygonPointColor: OptString(def.polygonPointColor),
+                polygonOpacity: OptFraction(def.polygonOpacity),
+                polygonEdgeOpacity: OptFraction(def.polygonEdgeOpacity),
+                polygonPointOpacity: OptFraction(def.polygonPointOpacity),
+                polygonEdgeSize: OptPositiveNum(def.polygonEdgeSize),
+                polygonPointSize: OptPositiveNum(def.polygonPointSize),
 
-                polygonPointSelectSize: Opt(VNumber({min: 0}), {
-                    fallback: def.polygonPointSelectSize,
-                }),
-                polygonPointSelectOpacity: Opt(VNumber({min: 0, max: 1}), {
-                    fallback: def.polygonPointSelectOpacity,
-                }),
-                polygonSelectOpacity: Opt(VNumber({min: 0, max: 1}), {
-                    fallback: def.polygonSelectOpacity,
-                }),
+                polygonPointSelectSize: OptPositiveNum(def.polygonPointSelectSize),
+                polygonPointSelectOpacity: OptFraction(def.polygonPointSelectOpacity),
+                polygonSelectOpacity: OptFraction(def.polygonSelectOpacity),
 
-                showAxis: Opt(VBool(), {fallback: def.showAxis}),
-                grid: Opt(VEnum(["none", "major", "minor"] as const), {
-                    fallback: def.grid,
-                }),
+                showAxis: OptBool(def.showAxis),
+                grid: Opt(VEnum(["none", "major", "minor"] as const), {fb: def.grid}),
 
                 snap: Opt(
                     VObject({
-                        gridMajor: Opt(VBool(), {fallback: def.snap.gridMajor}),
-                        gridMinor: Opt(VBool(), {fallback: def.snap.gridMinor}),
-                        lines: Opt(VBool(), {fallback: def.snap.lines}),
-                        points: Opt(VBool(), {fallback: def.snap.points}),
-                        disableAll: Opt(VBool(), {fallback: def.snap.disableAll}),
+                        gridMajor: OptBool(def.snap.gridMajor),
+                        gridMinor: OptBool(def.snap.gridMinor),
+                        lines: OptBool(def.snap.lines),
+                        points: OptBool(def.snap.points),
+                        disableAll: OptBool(def.snap.disableAll),
                     }),
-                    {fallback: def.snap}
+                    {fb: def.snap}
                 ),
 
                 snapDistance: Opt(
                     VObject({
-                        gridMajor: Opt(VNumber({min: 0}), {
-                            fallback: def.snapDistance.gridMajor,
-                        }),
-                        gridMinor: Opt(VNumber({min: 0}), {
-                            fallback: def.snapDistance.gridMinor,
-                        }),
-                        lines: Opt(VNumber({min: 0}), {fallback: def.snapDistance.lines}),
-                        points: Opt(VNumber({min: 0}), {
-                            fallback: def.snapDistance.points,
-                        }),
+                        gridMajor: OptPositiveNum(def.snapDistance.gridMajor),
+                        gridMinor: OptPositiveNum(def.snapDistance.gridMinor),
+                        lines: OptPositiveNum(def.snapDistance.lines),
+                        points: OptPositiveNum(def.snapDistance.points),
                     }),
-                    {fallback: def.snapDistance}
+                    {fb: def.snapDistance}
                 ),
 
-                zoomSpeed: Opt(VNumber({min: 0.01, max: 0.5}), {fallback: def.zoomSpeed}),
+                zoomSpeed: Opt(VNumber({min: 0.01, max: 0.5}), {fb: def.zoomSpeed}),
             });
 
             const res = verifier(configRaw);
             if ("result" in res) {
                 this.setConfig(res.result);
+            } else {
+                return res.errors;
             }
-        } catch (e) {}
+        } catch (e) {
+            return [{message: `Invalid JSON: ${e.message}`}];
+        }
     }
 
     // Tools
