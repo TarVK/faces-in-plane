@@ -1,4 +1,4 @@
-import {mergeStyles} from "@fluentui/react";
+import {getTheme, mergeStyles} from "@fluentui/react";
 import {IPoint} from "face-combiner";
 import {Field, useDataHook} from "model-react";
 import React, {FC, useCallback} from "react";
@@ -6,7 +6,7 @@ import {useRef} from "react";
 import {getDistance} from "../getDistance";
 import {EditorPlane} from "./grid/EditorPlane";
 import {Polygons} from "./shapes/Polygons";
-import {EditorSidebar} from "./sidebar/EditorSidebar";
+import {EditorToolbar} from "./toolbar/EditorToolbar";
 import {IGeometryEditorProps} from "./_types/IGeometryEditorProps";
 import {IInteractionHandler} from "./grid/_types/IInteractionHandler";
 import {GeometryCodeEditor} from "./geometryCodeEditor/GeometryCodeEditor";
@@ -119,7 +119,7 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
             mousePos.current?.set(point);
             if (evt.buttons == 1) {
                 const tool = state.getSelectedTool();
-                if (tool == "edit") {
+                if (tool == "edit" && !readonly) {
                     const movedPoint = didSelectPointOnClick.current && movePoint(point);
                     if (movedPoint) {
                         didMovePoint.current = true;
@@ -172,26 +172,51 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
             style={{
                 width,
                 height,
+                background: "white",
             }}>
-            <GeometryCodeEditor state={state} editorRef={editorRef} readonly={readonly} />
-            <EditorSidebar state={state} readonly={readonly} />
-            <EditorPlane
-                width={"auto"}
-                height={height}
-                state={state}
-                onMouseDown={onClick}
-                onMouseMove={onMouseMove}
-                onMouseUp={onMouseUp}
-                onKeyDown={onKeyDown}>
-                <Polygons state={state} mousePos={mousePos.current} readonly={readonly} />
-            </EditorPlane>
+            <EditorToolbar state={state} readonly={readonly} />
+            <div className="content">
+                <GeometryCodeEditor
+                    state={state}
+                    editorRef={editorRef}
+                    readonly={readonly}
+                />
+                <EditorPlane
+                    width={"auto"}
+                    height={height}
+                    state={state}
+                    onMouseDown={onClick}
+                    onMouseMove={onMouseMove}
+                    onMouseUp={onMouseUp}
+                    onKeyDown={onKeyDown}>
+                    <Polygons
+                        state={state}
+                        mousePos={mousePos.current}
+                        readonly={readonly}
+                    />
+                </EditorPlane>
+            </div>
         </div>
     );
 };
 
 const style = mergeStyles({
     display: "flex",
+    flexDirection: "column",
     ".plane": {
         flexGrow: 1,
+    },
+    ".content": {
+        display: "flex",
+        flex: 1,
+        minHeight: 0,
+    },
+    ".codeEditor": {
+        boxShadow: "rgb(0 0 0 / 25%) 3px 0px 10px 0px",
+        // Cut off the box shadow at the top
+        clipPath: "polygon(0 0, 0px 10000px, 10000px 10000px, 10000px 0px)",
+    },
+    ".toolbar": {
+        boxShadow: "rgb(0 0 0 / 25%) 3px 0px 10px 0px",
     },
 });

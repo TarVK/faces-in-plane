@@ -4,51 +4,79 @@ import {useEditor} from "./geometry/editor/geometryCodeEditor/useEditor";
 import {Stack, StackItem, getTheme, Dropdown, PrimaryButton} from "@fluentui/react";
 import {GeometryEditorState} from "./geometry/editor/GeometryEditorState";
 import {GeometryEditor} from "./geometry/editor/GeometryEditor";
+import {Header} from "./Header";
+import {Controls} from "./controls/Controls";
 
 const theme = getTheme();
 export const App: FC = () => {
-    const editorState = useRef<GeometryEditorState>();
-    if (!editorState.current) {
-        editorState.current = new GeometryEditorState();
-        // editorState.current.setPolygons([
-        //     {
-        //         data: "1",
-        //         polygon: [
-        //             {x: 1, y: 1},
-        //             {x: 2, y: 2},
-        //             {x: 1.5, y: 3},
-        //             {x: 3, y: 4},
-        //             {x: 5, y: 7},
-        //             {x: 12, y: 7},
-        //             {x: 16, y: 5},
-        //             {x: 15.009575843811, y: 2.52393960952759},
-        //             {x: 15, y: 2.5},
-        //             {x: 14, y: 1.7},
-        //             {x: 9.67873620209226, y: 1.42992101263077},
-        //             {x: 9.67873573303223, y: 1.42992055416107},
-        //             {x: 6, y: 1.2},
-        //             {x: 5.12431324239551, y: 1.16497252969582},
-        //             {x: 4.75944375991821, y: 1.15037763118744},
-        //             {x: 4.75944384237432, y: 1.15037775369497},
-        //             {x: 1, y: 1},
-        //             {x: 17, y: 0},
-        //             {x: 17, y: 8},
-        //             {x: 0, y: 8},
-        //             {x: 0, y: 0},
-        //             {x: 17, y: 0},
-        //         ].map(({x, y}) => ({x: x * 100, y: y * 100})),
-        //     },
-        // ]);
+    const inputState = useRef<GeometryEditorState>();
+    if (!inputState.current) inputState.current = new GeometryEditorState();
+
+    const outputState = useRef<GeometryEditorState>();
+    if (!outputState.current) {
+        outputState.current = new GeometryEditorState();
+        outputState.current.setSelectedTool("edit");
     }
 
     return (
-        <div style={{display: "flex", height: "100%"}}>
-            <div style={{flex: 1}}>
-                <GeometryEditor state={editorState.current} />
-            </div>
-            <div style={{flex: 1}}>
-                <GeometryEditor state={editorState.current} readonly />
-            </div>
-        </div>
+        <Stack style={{height: "100%", background: theme.palette.neutralLight}}>
+            <Header />
+            <StackItem
+                grow
+                style={{marginTop: theme.spacing.m, minHeight: 0, flexShrink: 1}}>
+                <Stack horizontal style={{height: "100%"}} gap={theme.spacing.m}>
+                    <StackItem>
+                        <Controls
+                            input={inputState.current}
+                            output={outputState.current}
+                        />
+                    </StackItem>
+                    <StackItem
+                        style={{
+                            position: "relative",
+                            boxShadow: "rgb(0 0 0 / 24%) 0px 0px 9px 3px",
+                            flex: 1,
+                        }}>
+                        <EditorLabel>Input</EditorLabel>
+                        <GeometryEditor state={inputState.current} />
+                    </StackItem>
+                    <StackItem
+                        style={{
+                            position: "relative",
+                            boxShadow: "rgb(0 0 0 / 24%) 0px 0px 9px 3px",
+                            zIndex: 1,
+                            flex: 1,
+                        }}>
+                        <EditorLabel>Output</EditorLabel>
+                        <GeometryEditor state={outputState.current} readonly />
+                    </StackItem>
+                </Stack>
+            </StackItem>
+        </Stack>
     );
 };
+
+const EditorLabel: FC = ({children}) => (
+    <div
+        style={{
+            position: "absolute",
+            zIndex: 1,
+            right: 20,
+            top: 50,
+            fontSize: 18,
+            padding: theme.spacing.s2,
+        }}>
+        {children}
+        <div
+            style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                top: 0,
+                zIndex: -1,
+                bottom: 0,
+                background: theme.palette.themeTertiary,
+                opacity: 0.4,
+            }}></div>
+    </div>
+);

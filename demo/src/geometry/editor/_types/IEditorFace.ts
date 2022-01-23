@@ -1,6 +1,6 @@
 import {IFace} from "face-combiner";
 
-export type IEditorFace = IFace<string> & {
+export type IEditorFace = IFace<any> & {
     color?: string;
     edgeColor?: string;
     pointColor?: string;

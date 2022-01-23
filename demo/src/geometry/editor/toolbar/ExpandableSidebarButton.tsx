@@ -38,7 +38,7 @@ export const ExpandableSidebarButton: FC<IExpandableSidebarButtonProps> = ({
                     className="extending"
                     style={{
                         position: "absolute",
-                        left: "100%",
+                        top: "100%",
                         backgroundColor: "white",
                         boxShadow: "rgb(0 0 0 / 25%) 4px 0px 10px 0px",
                     }}>

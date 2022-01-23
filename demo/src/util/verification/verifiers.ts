@@ -20,7 +20,7 @@ export const Opt =
             fb?: K;
         } = {}
     ): IVerifier<T | TIfAny<K, undefined, K>> =>
-    (val: any) => {
+    val => {
         if (val === undefined) return {result: def == undefined ? fallback : def} as any;
         const res = verifier(val);
         if ("error" in res && fallback != undefined) return {result: fallback};

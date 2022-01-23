@@ -10,13 +10,13 @@ export const Header: FC = ({children}) => (
             root: {
                 boxShadow: theme.effects.elevation16,
                 paddingLeft: theme.spacing.m,
-                marginBottom: theme.spacing.s1,
                 zIndex: 100,
+                background: "white",
                 position: "relative",
             },
         }}>
         <StackItem align="center">
-            <h1 style={{margin: 0}}>SAT-solver</h1>
+            <h1 style={{margin: 0}}>Polygon combiner</h1>
         </StackItem>
         <StackItem align="center">{children}</StackItem>
         <StackItem align="center">

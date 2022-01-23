@@ -18,6 +18,7 @@ import {
     VEnum,
 } from "../../util/verification/verifiers";
 import {IErrorData} from "../../util/verification/_types/IVerifier";
+import {formatJson} from "./geometryCodeEditor/formatting/formatJson";
 
 export class GeometryEditorState {
     protected undoVersion = new Field(0);
@@ -463,8 +464,14 @@ export class GeometryEditorState {
      */
     public addPoint(point: IPoint): void {
         if (this.selection.get() == null) {
+            const newId =
+                this.polygons.get().reduce((max, polygon) => {
+                    const data = polygon.get().data;
+                    if (typeof data != "number") return max;
+                    return Math.max(max, data);
+                }, 0) + 1;
             const newPolygon = new Field<IEditorFace>({
-                data: "",
+                data: newId,
                 polygon: [],
             });
             this.selection.set({
@@ -711,10 +718,9 @@ export class GeometryEditorState {
 
     // Text synchronization
     protected text = new DataCacher(h =>
-        JSON.stringify(
+        formatJson(
             this.polygonData.get(h).map(({face}) => face.get(h)),
-            null,
-            4
+            {maxWidth: 32, indentation: "  "}
         )
     );
 

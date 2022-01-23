@@ -9,7 +9,7 @@ import {ExpandableSidebarButton} from "./ExpandableSidebarButton";
 import {SidebarButton} from "./SidebarButton";
 import {SnapControls} from "./SnapControls";
 
-export const EditorSidebar: FC<{
+export const EditorToolbar: FC<{
     state: GeometryEditorState;
     readonly?: boolean;
 }> = ({state, readonly}) => {
@@ -25,11 +25,10 @@ export const EditorSidebar: FC<{
     const cfg = state.getConfig(h);
     return (
         <div
+            className="toolbar"
             style={{
-                boxShadow: "rgb(0 0 0 / 25%) 3px 0px 10px 0px",
                 zIndex: 1,
                 display: "flex",
-                flexDirection: "column",
                 position: "relative",
             }}>
             <SidebarButton
@@ -48,7 +47,7 @@ export const EditorSidebar: FC<{
             />
 
             {/* Actions */}
-            <div style={{height: 50}} />
+            <div style={{width: 50}} />
             <SidebarButton
                 icon={
                     <>
@@ -115,7 +114,7 @@ export const EditorSidebar: FC<{
             )}
 
             {/* Extra settings */}
-            <div style={{height: 50}} />
+            <div style={{flex: 1}} />
             <SidebarButton
                 icon="Code"
                 hover="Show json editor"

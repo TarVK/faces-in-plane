@@ -4,6 +4,7 @@ import {useEditor} from "./useEditor";
 import {GeometryEditorState} from "../GeometryEditorState";
 import {editor as Editor} from "monaco-editor/esm/vs/editor/editor.api";
 import {MessageBar, MessageBarButton, MessageBarType} from "@fluentui/react";
+import {formatJson} from "./formatting/formatJson";
 
 export const GeometryCodeEditor: FC<{
     state: GeometryEditorState;
@@ -87,12 +88,15 @@ export const GeometryCodeEditor: FC<{
 
     return (
         <div
+            className="codeEditor"
             style={{
-                flex: shown ? 1 : 0,
+                flex: shown ? 0.7 : 0,
                 minWidth: 0,
                 width: shown ? "auto" : 0,
                 display: "flex",
                 flexDirection: "column",
+                background: "white",
+                zIndex: 10,
             }}>
             {el}
 

@@ -18,7 +18,7 @@ export const SidebarButton: FC<ISidebarButtonProps> = ({
     title,
     onClick,
     selected,
-    hoverDirection = DirectionalHint.rightCenter,
+    hoverDirection = DirectionalHint.topCenter,
 }) => {
     const stringIcon = typeof icon == "string";
     const tooltipId = useId(stringIcon ? icon : title);
