@@ -1,7 +1,7 @@
 import {DirectionalHint, FontIcon, getTheme, Slider} from "@fluentui/react";
 import {Field, useDataHook} from "model-react";
 import {config} from "process";
-import React, {FC, useCallback} from "react";
+import React, {FC, useCallback, useEffect} from "react";
 import {GeometryEditorState} from "../GeometryEditorState";
 import {IEditorConfig} from "../_types/IEditorConfig";
 import {EditorSettings} from "./EditorSettings";
@@ -22,6 +22,10 @@ export const EditorToolbar: FC<{
         [state]
     );
 
+    useEffect(() => {
+        if (readonly) state.setSelectedTool("edit");
+    }, [readonly, state]);
+
     const cfg = state.getConfig(h);
     return (
         <div
@@ -31,23 +35,27 @@ export const EditorToolbar: FC<{
                 display: "flex",
                 position: "relative",
             }}>
-            <SidebarButton
-                icon="AddFavorite"
-                hover={"Add new polygons and points (T)"}
-                title="Add polygons"
-                onClick={() => state.setSelectedTool("create")}
-                selected={state.getSelectedTool(h) == "create"}
-            />
-            <SidebarButton
-                icon="Edit"
-                hover={"Edit existing polygons and points (T)"}
-                title="Edit polygons"
-                onClick={() => state.setSelectedTool("edit")}
-                selected={state.getSelectedTool(h) == "edit"}
-            />
+            {!readonly && (
+                <>
+                    <SidebarButton
+                        icon="AddFavorite"
+                        hover={"Add new polygons and points (T)"}
+                        title="Add polygons"
+                        onClick={() => state.setSelectedTool("create")}
+                        selected={state.getSelectedTool(h) == "create"}
+                    />
+                    <SidebarButton
+                        icon="Edit"
+                        hover={"Edit existing polygons and points (T)"}
+                        title="Edit polygons"
+                        onClick={() => state.setSelectedTool("edit")}
+                        selected={state.getSelectedTool(h) == "edit"}
+                    />
+                    <div style={{width: 50}} />
+                </>
+            )}
 
             {/* Actions */}
-            <div style={{width: 50}} />
             <SidebarButton
                 icon={
                     <>

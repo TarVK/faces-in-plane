@@ -217,6 +217,6 @@ const style = mergeStyles({
         clipPath: "polygon(0 0, 0px 10000px, 10000px 10000px, 10000px 0px)",
     },
     ".toolbar": {
-        boxShadow: "rgb(0 0 0 / 25%) 3px 0px 10px 0px",
+        boxShadow: "rgb(0 0 0 / 25%) 0px 3px 10px 0px",
     },
 });

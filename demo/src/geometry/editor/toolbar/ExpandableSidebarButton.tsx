@@ -40,7 +40,7 @@ export const ExpandableSidebarButton: FC<IExpandableSidebarButtonProps> = ({
                         position: "absolute",
                         top: "100%",
                         backgroundColor: "white",
-                        boxShadow: "rgb(0 0 0 / 25%) 4px 0px 10px 0px",
+                        boxShadow: "rgb(0 0 0 / 25%) 0px 4px 10px 0px",
                     }}>
                     {edxpandable}
                 </div>
@@ -58,7 +58,9 @@ export const ExpandableSidebarButton: FC<IExpandableSidebarButtonProps> = ({
 
 const style = mergeStyles({
     ":hover": {
-        boxShadow: "rgb(0 0 0 / 25%) 3px 0px 10px 0px",
+        boxShadow: "rgb(0 0 0 / 25%) 0px 3px 10px 0px",
+        zIndex: 1000,
+        position: "relative",
         ".extending": {
             display: "block",
         },

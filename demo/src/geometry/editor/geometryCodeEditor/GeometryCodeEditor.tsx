@@ -24,6 +24,10 @@ export const GeometryCodeEditor: FC<{
         },
         options: {
             language: "json",
+            scrollbar: {
+                horizontal: "hidden",
+                verticalScrollbarSize: 5,
+            },
         },
     });
     editorRef.current = codeRef.current;
@@ -90,7 +94,7 @@ export const GeometryCodeEditor: FC<{
         <div
             className="codeEditor"
             style={{
-                flex: shown ? 0.7 : 0,
+                flex: shown ? 0.9 : 0,
                 minWidth: 0,
                 width: shown ? "auto" : 0,
                 display: "flex",
