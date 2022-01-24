@@ -60,4 +60,6 @@ export type IEditorConfig = {
     };
     /** How quickly to zoom in and out (0-1) */
     zoomSpeed: number;
+    /** The distance at which a point should be selectable */
+    selectPointDistance: number;
 };

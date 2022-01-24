@@ -74,6 +74,7 @@ export class GeometryEditorState {
             points: 10,
         },
         zoomSpeed: 0.1,
+        selectPointDistance: 15,
     });
 
     /**
@@ -290,6 +291,7 @@ export class GeometryEditorState {
                 ),
 
                 zoomSpeed: Opt(VNumber({min: 0.01, max: 0.5}), {fb: def.zoomSpeed}),
+                selectPointDistance: OptPositiveNum(def.selectPointDistance),
             });
 
             const res = verifier(configRaw);

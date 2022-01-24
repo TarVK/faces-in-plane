@@ -128,7 +128,7 @@ export const EditorSettings: FC<{state: GeometryEditorState}> = ({state}) => {
                     </div>
                     <TooltipHost
                         content="Edit default polygon color"
-                        id={useId("point")}
+                        id={useId("polygon")}
                         calloutProps={calloutProps}
                         delay={TooltipDelay.long}
                         directionalHint={DirectionalHint.topCenter}
@@ -152,7 +152,7 @@ export const EditorSettings: FC<{state: GeometryEditorState}> = ({state}) => {
                     <div style={{height: 50}} />
                     <TooltipHost
                         content="Edit selected point size and opacity"
-                        id={useId("point")}
+                        id={useId("selected point")}
                         calloutProps={calloutProps}
                         delay={TooltipDelay.long}
                         directionalHint={DirectionalHint.topCenter}
@@ -193,7 +193,7 @@ export const EditorSettings: FC<{state: GeometryEditorState}> = ({state}) => {
                     </div>
                     <TooltipHost
                         content="Edit selected polygon opacity"
-                        id={useId("point")}
+                        id={useId("selected polygon")}
                         calloutProps={calloutProps}
                         delay={TooltipDelay.long}
                         directionalHint={DirectionalHint.topCenter}
@@ -221,7 +221,7 @@ export const EditorSettings: FC<{state: GeometryEditorState}> = ({state}) => {
                     <div style={{height: 50}} />
                     <TooltipHost
                         content="Edit zoom speed"
-                        id={useId("point")}
+                        id={useId("zoom")}
                         calloutProps={calloutProps}
                         delay={TooltipDelay.long}
                         directionalHint={DirectionalHint.topCenter}
@@ -239,6 +239,32 @@ export const EditorSettings: FC<{state: GeometryEditorState}> = ({state}) => {
                                 updateConfig(cfg => ({
                                     ...cfg,
                                     zoomSpeed: value,
+                                }))
+                            }
+                            showValue
+                            snapToStep
+                        />
+                    </div>
+                    <TooltipHost
+                        content="Edit distance from cursor at which a point is selectable"
+                        id={useId("point snap")}
+                        calloutProps={calloutProps}
+                        delay={TooltipDelay.long}
+                        directionalHint={DirectionalHint.topCenter}
+                        styles={hostStyles}>
+                        <Label>Point selection sensitivity</Label>
+                    </TooltipHost>
+                    <div style={{display: "flex"}}>
+                        <Slider
+                            styles={{root: {flexGrow: 1}}}
+                            min={0}
+                            max={40}
+                            step={1}
+                            value={cfg.selectPointDistance}
+                            onChange={value =>
+                                updateConfig(cfg => ({
+                                    ...cfg,
+                                    selectPointDistance: value,
                                 }))
                             }
                             showValue

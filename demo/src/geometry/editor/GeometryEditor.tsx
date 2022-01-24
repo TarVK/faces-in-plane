@@ -57,8 +57,11 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
             const closestPoint = state.findNearestSelectionPoint(point, currentIndex);
             if (!closestPoint) return false;
 
+            const {scale} = state.getTransformation();
+            const {selectPointDistance} = state.getConfig();
+
             const dist = getDistance(closestPoint.point, point);
-            if (dist < 20) {
+            if (dist < selectPointDistance / scale) {
                 state.selectPolygonPoint(closestPoint.index);
                 return true;
             }
