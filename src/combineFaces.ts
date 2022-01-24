@@ -11,6 +11,7 @@ import {IMonotonePolygonSection} from "./_types/IMonotonePolygonSection";
 import {generateFaces} from "./generateFaces";
 import {handleCrossEvent} from "./handleCrossEvent";
 import {handlePolygonEvents} from "./handlePolygonEvents";
+import {getSideOfLineOrPoint} from "./utils";
 
 /**
  * Takes a set of faces whose edges may cross, and combines them into a set of non-crossing polygons that retain the same information
@@ -46,16 +47,16 @@ export function combineFaces<F extends IFace<any>>(faces: F[]): IFace<F[]>[] {
         if (!a) return -1;
         if (!b) return 1;
 
-        const aStartSide = getSideOfLine(b, a.start);
-        const aEndSide = getSideOfLine(b, a.end);
+        const aStartSide = getSideOfLineOrPoint(b, a.start);
+        const aEndSide = getSideOfLineOrPoint(b, a.end);
 
         // aEndSide != -aStartSide prioritizes b's result in case a's points are on opposite sides of b
         if (aStartSide != Side.on && aEndSide != -aStartSide) return aStartSide;
         if (aEndSide != Side.on && aEndSide != -aStartSide) return aEndSide;
 
-        const bStartSide = getSideOfLine(a, b.start);
+        const bStartSide = getSideOfLineOrPoint(a, b.start);
         if (bStartSide != Side.on) return -bStartSide;
-        const bEndSide = getSideOfLine(a, b.end);
+        const bEndSide = getSideOfLineOrPoint(a, b.end);
         if (bEndSide != Side.on) return -bEndSide;
 
         // Sort all intervals with the same left boundary arbitrarily
@@ -98,6 +99,11 @@ export function combineFaces<F extends IFace<any>>(faces: F[]): IFace<F[]>[] {
             );
         }
     }
+
+    if (scanLine.getAll().length != 1)
+        throw new Error(
+            "Something went wrong, scanline should've finished with a single itnerval"
+        );
 
     return generateFaces(sections);
 }

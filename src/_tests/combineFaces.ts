@@ -321,6 +321,56 @@ describe("combineFaces", () => {
             [3, [p1, p2, p4]],
         ]);
     });
+
+    describe("robustness", () => {
+        it("Should handle duplicate event coordinates", () => {
+            // https://puu.sh/IEGxF/9ea0186e16.png
+            const p1: IFace<number> = {
+                data: 1,
+                polygon: [
+                    {x: 200, y: 300},
+                    {
+                        x: 297.4210891723633,
+                        y: 319.48421783447264,
+                    },
+                    {x: 400, y: 340},
+                    {
+                        x: 334.3693572998047,
+                        y: 476.74287719726567,
+                    },
+                    {
+                        x: 297.4210891723633,
+                        y: 319.48421783447264,
+                    },
+                    {
+                        x: 214.36935729980468,
+                        y: 438.74287719726567,
+                    },
+                ],
+            };
+            const p2: IFace<number> = {
+                data: 2,
+                polygon: [
+                    {x: 200, y: 300},
+                    {x: 400, y: 340},
+                    {
+                        x: 214.36935729980468,
+                        y: 438.74287719726567,
+                    },
+                ],
+            };
+            const polygons = [p1, p2];
+
+            const out = combineFaces(polygons);
+
+            verifyShape(out, [
+                [3, [p1]],
+                [3, [p2]],
+                [3, [p1, p2]],
+                [3, [p1, p2]],
+            ]);
+        });
+    });
 });
 
 /**

@@ -10,6 +10,7 @@ import {ICounter} from "./_types/ICounter";
 import {ICrossEvent, IEvent} from "./_types/IEvent";
 import {IInterval} from "./_types/IInterval";
 import {IMonotonePolygonSection} from "./_types/IMonotonePolygonSection";
+import {ISegment, pointEquals} from ".";
 
 /**************************************************************************
  * This file contains helper functions that's specific to this algorithm, *
@@ -91,12 +92,12 @@ export const getIntervalFinder: <F extends IFace<any>>(
     (point, steer = Side.on) =>
     i => {
         if (i.left) {
-            const leftSide = getSideOfLine(i.left, point);
+            const leftSide = getSideOfLineOrPoint(i.left, point);
             if (leftSide == Side.left) return Side.left;
         }
 
         if (i.right) {
-            const rightSide = getSideOfLine(i.right, point);
+            const rightSide = getSideOfLineOrPoint(i.right, point);
             if (rightSide == Side.right) return Side.right;
         }
 
@@ -113,9 +114,9 @@ export function sortBoundaries<F extends IFace<any>>(
 ): IBoundary<F>[] {
     const sorted = [...boundaries];
     sorted.sort((a, b) => {
-        const startSide = getSideOfLine(b, a.start);
+        const startSide = getSideOfLineOrPoint(b, a.start);
         if (startSide != Side.on) return startSide;
-        const endSide = getSideOfLine(b, a.end);
+        const endSide = getSideOfLineOrPoint(b, a.end);
         if (endSide != Side.on) return endSide;
         return a.id - b.id;
     });
@@ -135,4 +136,20 @@ export function augmentSources<F extends IFace<any>>(
     // TODO: start using some kind of immutable set datastructure and make addition/removal operations log(n) time
     if (boundary.side == "left") return [...sources, boundary.source];
     else return sources.filter(el => el != boundary.source);
+}
+
+// This function is used to deal with a robustness issue that can occur when a intersection event calculates the intersection to be an already earlier handled point
+/**
+ * Checks the side that the given point is relative to the line. In case the given line consists of two equal points, it checks a vertical line through this point
+ * @param line The line to compare to
+ * @param point The point to get the side of
+ * @returns The side relative to the line
+ */
+export function getSideOfLineOrPoint(line: ISegment, point: IPoint) {
+    if (pointEquals(line.end, line.start)) {
+        if (point.x < line.start.x) return Side.left;
+        if (point.x > line.start.x) return Side.right;
+        return Side.on;
+    }
+    return getSideOfLine(line, point);
 }
