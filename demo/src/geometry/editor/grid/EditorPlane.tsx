@@ -17,6 +17,8 @@ export const EditorPlane: FC<IEditorPlaneProps> = ({
     onMouseMove: onMouseMoveHandler,
     onKeyDown: onKeyDownHandler,
     onKeyUp: onKeyUpHandler,
+    onMouseEnter,
+    onMouseLeave,
 }) => {
     const [h] = useDataHook();
     const [size, setSize] = useState<{x: number; y: number}>({x: 0, y: 0});
@@ -194,7 +196,9 @@ export const EditorPlane: FC<IEditorPlaneProps> = ({
             onMouseUp={onMouseUp}
             onMouseMove={onMouseDrag}
             onWheel={onWheel}
-            onContextMenu={onContextMenu}>
+            onContextMenu={onContextMenu}
+            onMouseLeave={onMouseLeave}
+            onMouseEnter={onMouseEnter}>
             {size.x != 0 && (
                 <>
                     <Grid offset={offset} scale={scale} gridSize={gridSize} type={grid} />

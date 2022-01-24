@@ -18,8 +18,8 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
     width = "100%",
     height = "100%",
 }) => {
-    const mousePos = useRef<Field<IPoint>>();
-    if (!mousePos.current) mousePos.current = new Field({x: 0, y: 0});
+    const mousePos = useRef<Field<IPoint | null>>();
+    if (!mousePos.current) mousePos.current = new Field(null);
     const editorRef = useRef<Editor.IStandaloneCodeEditor>();
 
     const addPoint = useCallback(
@@ -131,6 +131,10 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
         [state]
     );
 
+    const onMouseLeave = useCallback(() => {
+        mousePos.current?.set(null);
+    }, [state]);
+
     const onKeyDown = useCallback(
         (event: KeyboardEvent) => {
             if (event.key == "Escape") state.deselectPolygon();
@@ -188,7 +192,8 @@ export const GeometryEditor: FC<IGeometryEditorProps> = ({
                     onMouseDown={onClick}
                     onMouseMove={onMouseMove}
                     onMouseUp={onMouseUp}
-                    onKeyDown={onKeyDown}>
+                    onKeyDown={onKeyDown}
+                    onMouseLeave={onMouseLeave}>
                     <Polygons
                         state={state}
                         mousePos={mousePos.current}

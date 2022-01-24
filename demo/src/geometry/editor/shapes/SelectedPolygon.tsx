@@ -23,13 +23,14 @@ export const SelectedPolygon: FC<ISelectedPolygonProps> = ({
     const {scale} = state.getTransformation(h);
 
     let newFace: IEditorFace;
-    if (state.getSelectedTool(h) == "create" && !readonly) {
+    const currentMousePos = mousePos.get(h);
+    if (state.getSelectedTool(h) == "create" && !readonly && currentMousePos) {
         const selectedPointIndex =
             state.getSelectedPointIndex(h) ?? face.polygon.length - 1;
 
         const newPoints = [
             ...face.polygon.slice(0, selectedPointIndex + 1),
-            state.snap(mousePos.get(h)),
+            state.snap(currentMousePos),
             ...face.polygon.slice(selectedPointIndex + 1),
         ];
         newFace = {...face, polygon: newPoints};

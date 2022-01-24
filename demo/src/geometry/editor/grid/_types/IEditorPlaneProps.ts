@@ -8,6 +8,9 @@ export type IEditorPlaneProps = {
     onMouseUp?: IInteractionHandler;
     onMouseMove?: IInteractionHandler;
 
+    onMouseLeave?: React.MouseEventHandler<HTMLDivElement>;
+    onMouseEnter?: React.MouseEventHandler<HTMLDivElement>;
+
     onKeyDown?: IKeyboardHandler;
     onKeyUp?: IKeyboardHandler;
 

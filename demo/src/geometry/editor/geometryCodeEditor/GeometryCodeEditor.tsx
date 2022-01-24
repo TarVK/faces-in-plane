@@ -4,7 +4,7 @@ import {useEditor} from "./useEditor";
 import {GeometryEditorState} from "../GeometryEditorState";
 import {editor as Editor} from "monaco-editor/esm/vs/editor/editor.api";
 import {MessageBar, MessageBarButton, MessageBarType} from "@fluentui/react";
-import {formatJson} from "./formatting/formatJson";
+import {findPolygonFromText} from "./findPolygonFromText";
 
 export const GeometryCodeEditor: FC<{
     state: GeometryEditorState;
@@ -67,15 +67,24 @@ export const GeometryCodeEditor: FC<{
         const editor = codeRef.current;
         const model = editor?.getModel();
         if (editor && model) {
-            const disposer = model.onDidChangeContent(event => {
+            const changeDisposer = model.onDidChangeContent(event => {
                 if (versionRef.current != event.versionId)
                     setHasError(!state.setText(model.getValue()));
                 versionRef.current = event.versionId;
             });
 
-            versionRef.current = model.getVersionId();
+            const cursorDisposer = editor.onDidChangeCursorPosition(event => {
+                if (event.source == "graphical" || event.source == "modelChange") return;
+                const text = editor.getValue();
+                const face = findPolygonFromText(text, event.position, state);
+                if (face) state.selectPolygon(face);
+            });
 
-            return () => disposer.dispose();
+            versionRef.current = model.getVersionId();
+            return () => {
+                changeDisposer.dispose();
+                cursorDisposer.dispose();
+            };
         }
     }, [state, codeRef.current]);
 
