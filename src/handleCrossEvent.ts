@@ -3,6 +3,7 @@ import {BalancedSearchTree} from "./util/BalancedSearchTree";
 import {ICounter} from "./_types/ICounter";
 import {ICrossEvent, IEvent, ILineEvent} from "./_types/IEvent";
 import {IInterval} from "./_types/IInterval";
+import {getSideOfLine, pointEquals, Side} from ".";
 
 /**
  * Handles the cross event by splitting the affected segments and adding continuation events to the queue
@@ -22,6 +23,11 @@ export function handleCrossEvent<F extends IFace<any>>(
     if (!leftSegment || !rightSegment)
         throw new Error(`Reached unreachable state 3: ${JSON.stringify(event)}`);
 
+    const prevInterval = scanLine.findPrevious(interval);
+    const nextInterval = scanLine.findNext(interval);
+    debugger;
+
+    // Cut the segments
     interval.left = {...leftSegment, end: point};
     const newLeftEvent: ILineEvent<F> = {
         ...leftSegment,
@@ -29,7 +35,8 @@ export function handleCrossEvent<F extends IFace<any>>(
         point,
         id: eventIdCounter(),
     };
-    eventQueue.insert(newLeftEvent);
+    if (!pointEquals(newLeftEvent.point, newLeftEvent.end))
+        eventQueue.insert(newLeftEvent);
 
     interval.right = {...rightSegment, end: point};
     const newRightEvent: ILineEvent<F> = {
@@ -38,12 +45,30 @@ export function handleCrossEvent<F extends IFace<any>>(
         point,
         id: eventIdCounter(),
     };
-    eventQueue.insert(newRightEvent);
+    if (!pointEquals(newRightEvent.point, newRightEvent.end))
+        eventQueue.insert(newRightEvent);
 
     // Update the neighbor intervals
-    const prevInterval = scanLine.findPrevious(interval);
-    const nextInterval = scanLine.findNext(interval);
-
     if (prevInterval) prevInterval.right = interval.left;
     if (nextInterval) nextInterval.left = interval.right;
+
+    debugger;
+    if (
+        prevInterval?.left &&
+        prevInterval?.right &&
+        (getSideOfLine(prevInterval.right, prevInterval.left.start) == Side.right ||
+            (getSideOfLine(prevInterval.right, prevInterval.left.start) == Side.on &&
+                getSideOfLine(prevInterval.right, prevInterval.left.end) == Side.right))
+    ) {
+        console.log("Detect1", {left: prevInterval.left, right: prevInterval.right});
+    }
+    if (
+        nextInterval?.left &&
+        nextInterval?.right &&
+        (getSideOfLine(nextInterval.right, nextInterval.left.start) == Side.right ||
+            (getSideOfLine(nextInterval.right, nextInterval.left.start) == Side.on &&
+                getSideOfLine(nextInterval.right, nextInterval.left.end) == Side.right))
+    ) {
+        console.log("Detect2", {left: nextInterval.left, right: nextInterval.right});
+    }
 }

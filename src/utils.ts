@@ -30,7 +30,9 @@ export function checkIntersections<F extends IFace<any>>(
 ): void {
     if (!interval.left || !interval.right) return;
     if (doesIntersect(interval.left, interval.right)) {
-        const intersect = getIntersectionPoint(interval.left, interval.right);
+        const intersectRaw = getIntersectionPoint(interval.left, interval.right);
+        const intersect = firstPoint(interval.left.end, interval.right.end, intersectRaw);
+
         const crossEvent: ICrossEvent<F> = {
             type: "cross",
             interval: interval,
@@ -152,4 +154,15 @@ export function getSideOfLineOrPoint(line: ISegment, point: IPoint) {
         return Side.on;
     }
     return getSideOfLine(line, point);
+}
+
+/**
+ * Determines the point whose event would occur first in lexicographical ordering
+ * @param points The points to get the first of
+ * @returns The point that's first
+ */
+export function firstPoint(...points: IPoint[]): IPoint {
+    return points.reduce((p1, p2) =>
+        p1.y < p2.y || (p1.y == p2.y && p1.x < p2.x) ? p1 : p2
+    );
 }

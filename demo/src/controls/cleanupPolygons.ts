@@ -45,6 +45,8 @@ export function cleanupPolygons(faces: IEditorFace[]): {
             point = next;
         }
 
+        // TODO: fix this, a greater number of left rotations doesn't necessarily mean it's counterclockwise
+        // Solution: perform an orientation test on the left top most point
         const isCounterClockWise = leftRotationCount > rightRotationCount;
         if (isCounterClockWise) return {source, corrected: face};
         else

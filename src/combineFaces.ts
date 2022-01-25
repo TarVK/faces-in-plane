@@ -102,7 +102,7 @@ export function combineFaces<F extends IFace<any>>(faces: F[]): IFace<F[]>[] {
 
     if (scanLine.getAll().length != 1)
         throw new Error(
-            "Something went wrong, scanline should've finished with a single itnerval"
+            "Something went wrong, scanline should've finished with a single interval"
         );
 
     return generateFaces(sections);
