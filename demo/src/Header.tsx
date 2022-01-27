@@ -41,7 +41,9 @@ export const Header: FC<{info?: React.ReactNode}> = ({children, info}) => {
                                 onClose={() => setShowInfo(false)}>
                                 {info}
                             </StandardModal>
-                            <CommandBarButton styles={{root: {height: "100%"}}}>
+                            <CommandBarButton
+                                onClick={() => setShowInfo(true)}
+                                styles={{root: {height: "100%"}}}>
                                 <FontIcon
                                     aria-label="Deselect"
                                     iconName="StatusCircleQuestionMark"

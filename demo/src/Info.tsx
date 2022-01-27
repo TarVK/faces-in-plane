@@ -14,14 +14,14 @@ export const Info: FC = () => (
         </p>
         <p>
             The algorithm takes a set of indepedent simple polygons (polygons without
-            holes or self-intersections) and outputs indepedent faces that these polygons
-            create when being part of the same plane.
+            holes or self-intersections) and outputs non-overlapping faces that these
+            polygons create when being part of the same plane.
         </p>
         <p>
             You can test the algorithm by first drawing some polygons in the left section
             and then pressing the "Combine polygons" button at the top of the screen. The
-            algorithm is known to have some robustness issues, which means that it may not
-            always compute the correct results because of rounding errors.
+            algorithm is known to have some robustness issues, which means that it may
+            output very incorrect results because of rounding errors.
         </p>
         <p>
             The code is visible on{" "}
