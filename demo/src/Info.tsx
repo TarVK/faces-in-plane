@@ -35,9 +35,9 @@ export const Info: FC = () => (
             .
         </p>
         <p>
-            This website including the polygon editor was also created from scratching
-            using some libraries such as <Link href="https://reactjs.org/">React</Link>,{" "}
-            <Link href="https://microsoft.github.io/monaco-editor/">Monaco</Link> and{" "}
+            This website including the polygon editor was also created from scratch using
+            some libraries such as <Link href="https://reactjs.org/">React</Link>,{" "}
+            <Link href="https://microsoft.github.io/monaco-editor/">Monaco</Link>, and{" "}
             <Link href="https://developer.microsoft.com/en-us/fluentui#/">Fluent-UI</Link>{" "}
             to simplify things.
         </p>
