@@ -6,11 +6,8 @@ export const Info: FC = () => (
         <p>
             This website is a demonstration for a polygon intersection algorithm I
             designed as part of a project for the Geometric Algorithms course (2IMA15)
-            taught at the{" "}
-            <Link href="https://www.tue.nl/en/">
-                Technological University of Eindhoven
-            </Link>
-            .
+            taught at{" "}
+            <Link href="https://www.tue.nl/en/">Eindhoven University of Technology</Link>.
         </p>
         <p>
             The algorithm takes a set of indepedent simple polygons (polygons without
