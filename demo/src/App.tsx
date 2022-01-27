@@ -6,33 +6,37 @@ import {GeometryEditorState} from "./geometry/editor/GeometryEditorState";
 import {GeometryEditor} from "./geometry/editor/GeometryEditor";
 import {Header} from "./Header";
 import {Controls} from "./controls/Controls";
+import {ConvertButton} from "./controls/ConvertButton";
+import {Info} from "./Info";
 
 const theme = getTheme();
 export const App: FC = () => {
     const inputState = useRef<GeometryEditorState>();
     if (!inputState.current) {
-        inputState.current = new GeometryEditorState();
+        inputState.current = new GeometryEditorState("input");
     }
 
     const outputState = useRef<GeometryEditorState>();
     if (!outputState.current) {
-        outputState.current = new GeometryEditorState();
+        outputState.current = new GeometryEditorState("output");
         outputState.current.setSelectedTool("edit");
     }
 
     return (
         <Stack style={{height: "100%", background: theme.palette.neutralLight}}>
-            <Header />
+            <Header info={<Info />}>
+                <ConvertButton input={inputState.current} output={outputState.current} />
+            </Header>
             <StackItem
                 grow
                 style={{marginTop: theme.spacing.m, minHeight: 0, flexShrink: 1}}>
                 <Stack horizontal style={{height: "100%"}} gap={theme.spacing.m}>
-                    <StackItem>
+                    {/* <StackItem>
                         <Controls
                             input={inputState.current}
                             output={outputState.current}
                         />
-                    </StackItem>
+                    </StackItem> */}
                     <StackItem
                         style={{
                             position: "relative",

@@ -1,5 +1,5 @@
-import {doesIntersect, getSideOfLine, pointEquals, Side} from "face-combiner";
-import {IEditorFace} from "../geometry/editor/_types/IEditorFace";
+import {doesIntersect, getSideOfLine, IPoint, pointEquals, Side} from "face-combiner";
+import {IEditorFace} from "./editor/_types/IEditorFace";
 
 /**
  * Cleans up the given polygons
@@ -32,22 +32,22 @@ export function cleanupPolygons(faces: IEditorFace[]): {
     );
 
     const counterClockwise = enoughPoints.map(({source, corrected: face}) => {
-        let leftRotationCount = 0;
-        let rightRotationCount = 0;
-        let prev = face.polygon[face.polygon.length - 2];
-        let point = face.polygon[face.polygon.length - 1];
-        for (let next of face.polygon) {
-            const side = getSideOfLine({start: prev, end: point}, next);
-            if (side == Side.left) leftRotationCount++;
-            else if (side == Side.right) rightRotationCount++;
-
-            prev = point;
-            point = next;
+        const l = face.polygon.length;
+        let topLeftIndex = 0;
+        let topLeft = face.polygon[topLeftIndex];
+        for (let i = 1; i < l; i++) {
+            const point = face.polygon[i];
+            if (point.x < topLeft.x || (point.x == topLeft.x && point.y > topLeft.y)) {
+                topLeft = point;
+                topLeftIndex = i;
+            }
         }
 
-        // TODO: fix this, a greater number of left rotations doesn't necessarily mean it's counterclockwise
-        // Solution: perform an orientation test on the left top most point
-        const isCounterClockWise = leftRotationCount > rightRotationCount;
+        const prev = face.polygon[(topLeftIndex + l - 1) % l];
+        const next = face.polygon[(topLeftIndex + 1) % l];
+        const isCounterClockWise =
+            getSideOfLine({start: prev, end: topLeft}, next) == Side.left;
+
         if (isCounterClockWise) return {source, corrected: face};
         else
             return {

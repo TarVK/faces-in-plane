@@ -21,6 +21,7 @@ import {IErrorData} from "../../util/verification/_types/IVerifier";
 import {formatJson} from "./geometryCodeEditor/formatting/formatJson";
 
 export class GeometryEditorState {
+    protected ID: string;
     protected undoVersion = new Field(0);
     protected polygonData = new Field<
         {
@@ -63,7 +64,7 @@ export class GeometryEditorState {
         snap: {
             gridMajor: true,
             gridMinor: true,
-            lines: true,
+            lines: false,
             points: true,
             disableAll: false,
         },
@@ -79,9 +80,11 @@ export class GeometryEditorState {
 
     /**
      * Creates a new editor state
+     * @param ID the ID of the state, used for managing local storage
      */
-    public constructor() {
-        const configText = localStorage.getItem("editorConfig");
+    public constructor(ID: string) {
+        this.ID = ID;
+        const configText = localStorage.getItem(`editorConfig:${ID}`);
         if (configText) this.loadConfig(configText);
     }
 
@@ -225,7 +228,7 @@ export class GeometryEditorState {
      */
     public setConfig(config: IEditorConfig): void {
         this.config.set(config);
-        localStorage.setItem("editorConfig", JSON.stringify(config));
+        localStorage.setItem(`editorConfig:${this.ID}`, JSON.stringify(config));
     }
 
     /**

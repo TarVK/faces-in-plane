@@ -2,8 +2,9 @@ import {getTheme, PrimaryButton} from "@fluentui/react";
 import {combineFaces} from "face-combiner";
 import React, {FC, useCallback} from "react";
 import {GeometryEditorState} from "../geometry/editor/GeometryEditorState";
-import {cleanupPolygons} from "./cleanupPolygons";
+import {cleanupPolygons} from "../geometry/cleanupPolygons";
 
+// TODO: this controls sidebar could be finished and extended if an interactive way of stepping through the algorithm is ever added
 const theme = getTheme();
 export const Controls: FC<{
     input: GeometryEditorState;
