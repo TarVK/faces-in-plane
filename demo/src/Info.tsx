@@ -29,7 +29,7 @@ export const Info: FC = () => (
                 Github.com/TarVK/faces-in-plane
             </Link>
             . Additionally a PDF is provided which explains how the algorithm operates:{" "}
-            <Link href="https://raw.githubusercontent.com/TarVK/faces-in-plane/blob/main/explanation/algorithm.pdf">
+            <Link href="https://github.com/TarVK/faces-in-plane/blob/main/explanation/algorithm.pdf">
                 Algorithm.pdf
             </Link>
             .
