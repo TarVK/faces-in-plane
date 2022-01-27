@@ -10,15 +10,19 @@ export const Controls: FC<{
     output: GeometryEditorState;
 }> = ({input, output}) => {
     const callCombineFaces = useCallback(() => {
-        const polygons = input.getPolygons().map(polygon => polygon.get());
-        const {valid: cleanedPolygons, invalid} = cleanupPolygons(polygons);
-        const combined = combineFaces(cleanedPolygons);
+        try {
+            const polygons = input.getPolygons().map(polygon => polygon.get());
+            const {valid: cleanedPolygons, invalid} = cleanupPolygons(polygons);
+            const combined = combineFaces(cleanedPolygons);
 
-        const combinedSimplified = combined.map(polygon => ({
-            ...polygon,
-            data: polygon.data.map(({data}) => data),
-        }));
-        output.setPolygons(combinedSimplified);
+            const combinedSimplified = combined.map(polygon => ({
+                ...polygon,
+                data: polygon.data.map(({data}) => data),
+            }));
+            output.setPolygons(combinedSimplified);
+        } catch (e) {
+            console.dir(e);
+        }
     }, [input, output]);
 
     return (

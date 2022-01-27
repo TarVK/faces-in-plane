@@ -11,11 +11,12 @@ import {ICrossEvent, IEvent} from "./_types/IEvent";
 import {IInterval} from "./_types/IInterval";
 import {IMonotonePolygonSection} from "./_types/IMonotonePolygonSection";
 import {ISegment, pointEquals} from ".";
+import {debugging} from "./debug";
 
-/**************************************************************************
- * This file contains helper functions that's specific to this algorithm, *
- * but not very interesting                                               *
- **************************************************************************/
+/****************************************************************************
+ * This file contains helper functions that are specific to this algorithm, *
+ * but not very interesting                                                 *
+ ****************************************************************************/
 
 /**
  * Checks whether the given interval will intersect itself at some point, and adds the cross event if so
@@ -31,6 +32,7 @@ export function checkIntersections<F extends IFace<any>>(
     if (!interval.left || !interval.right) return;
     if (doesIntersect(interval.left, interval.right)) {
         const intersectRaw = getIntersectionPoint(interval.left, interval.right);
+        if (debugging.enabled) (intersectRaw as any)["isIntersection"] = true;
         const intersect = firstPoint(interval.left.end, interval.right.end, intersectRaw);
 
         const crossEvent: ICrossEvent<F> = {
@@ -96,11 +98,13 @@ export const getIntervalFinder: <F extends IFace<any>>(
         if (i.left) {
             const leftSide = getSideOfLineOrPoint(i.left, point);
             if (leftSide == Side.left) return Side.left;
+            if (leftSide == Side.on) return steer;
         }
 
         if (i.right) {
             const rightSide = getSideOfLineOrPoint(i.right, point);
             if (rightSide == Side.right) return Side.right;
+            if (rightSide == Side.on) return steer;
         }
 
         return steer;

@@ -12,6 +12,7 @@ import {generateFaces} from "./generateFaces";
 import {handleCrossEvent} from "./handleCrossEvent";
 import {handlePolygonEvents} from "./handlePolygonEvents";
 import {getSideOfLineOrPoint} from "./utils";
+import {ISegment} from ".";
 
 /**
  * Takes a set of faces whose edges may cross, and combines them into a set of non-crossing polygons that retain the same information
@@ -47,17 +48,8 @@ export function combineFaces<F extends IFace<any>>(faces: F[]): IFace<F[]>[] {
         if (!a) return -1;
         if (!b) return 1;
 
-        const aStartSide = getSideOfLineOrPoint(b, a.start);
-        const aEndSide = getSideOfLineOrPoint(b, a.end);
-
-        // aEndSide != -aStartSide prioritizes b's result in case a's points are on opposite sides of b
-        if (aStartSide != Side.on && aEndSide != -aStartSide) return aStartSide;
-        if (aEndSide != Side.on && aEndSide != -aStartSide) return aEndSide;
-
-        const bStartSide = getSideOfLineOrPoint(a, b.start);
-        if (bStartSide != Side.on) return -bStartSide;
-        const bEndSide = getSideOfLineOrPoint(a, b.end);
-        if (bEndSide != Side.on) return -bEndSide;
+        const side = sideOfSegment(a, b);
+        if (side != Side.on) return side;
 
         // Sort all intervals with the same left boundary arbitrarily
         return a.id - b.id;
@@ -106,4 +98,27 @@ export function combineFaces<F extends IFace<any>>(faces: F[]): IFace<F[]>[] {
         );
 
     return generateFaces(sections);
+}
+
+/**
+ * Checks what side a is on compared to b
+ * @param a Line segment a
+ * @param b Line segment b
+ * @returns The side that a is on compared to b
+ */
+export function sideOfSegment(a: ISegment, b: ISegment): Side {
+    const aStartSide = getSideOfLineOrPoint(b, a.start);
+    const aEndSide = getSideOfLineOrPoint(b, a.end);
+
+    // aEndSide != -aStartSide prioritizes b's result in case a's points are on opposite sides of b
+    if (aEndSide != -aStartSide) {
+        if (aStartSide != Side.on) return aStartSide;
+        if (aEndSide != Side.on && aEndSide != -aStartSide) return aEndSide;
+    }
+
+    const bStartSide = getSideOfLineOrPoint(a, b.start);
+    if (bStartSide != Side.on) return -bStartSide;
+    const bEndSide = getSideOfLineOrPoint(a, b.end);
+    if (bEndSide != Side.on) return -bEndSide;
+    return Side.on;
 }

@@ -371,7 +371,7 @@ describe("combineFaces", () => {
             ]);
         });
 
-        it("Should handle something yet unknown", () => {
+        it("Should handle intersection after endpoint event coordinates", () => {
             const f: IFace<number>[] = [
                 {
                     data: 1,
@@ -424,11 +424,11 @@ describe("combineFaces", () => {
 
             verifyShape(out, [
                 [3, [f[0]]],
-                [3, [f[0]]],
+                [4, [f[0]]],
                 [6, [f[0]]],
-                [4, [f[1]]],
-                [5, [f[0], f[1]]],
+                [5, [f[1]]],
                 [4, [f[0], f[1]]],
+                [5, [f[0], f[1]]],
             ]);
         });
     });

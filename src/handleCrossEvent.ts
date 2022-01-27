@@ -3,7 +3,10 @@ import {BalancedSearchTree} from "./util/BalancedSearchTree";
 import {ICounter} from "./_types/ICounter";
 import {ICrossEvent, IEvent, ILineEvent} from "./_types/IEvent";
 import {IInterval} from "./_types/IInterval";
-import {getSideOfLine, pointEquals, Side} from ".";
+import {getSideOfLine, ISegment, pointEquals, Side} from ".";
+import {getSideOfLineOrPoint} from "./utils";
+import {sideOfSegment} from "./combineFaces";
+import {checkInvariants} from "./debug";
 
 /**
  * Handles the cross event by splitting the affected segments and adding continuation events to the queue
@@ -25,7 +28,9 @@ export function handleCrossEvent<F extends IFace<any>>(
 
     const prevInterval = scanLine.findPrevious(interval);
     const nextInterval = scanLine.findNext(interval);
-    debugger;
+    if (prevInterval) scanLine.delete(prevInterval);
+    if (nextInterval) scanLine.delete(nextInterval);
+    scanLine.delete(interval);
 
     // Cut the segments
     interval.left = {...leftSegment, end: point};
@@ -48,27 +53,19 @@ export function handleCrossEvent<F extends IFace<any>>(
     if (!pointEquals(newRightEvent.point, newRightEvent.end))
         eventQueue.insert(newRightEvent);
 
-    // Update the neighbor intervals
-    if (prevInterval) prevInterval.right = interval.left;
-    if (nextInterval) nextInterval.left = interval.right;
+    scanLine.insert(interval);
 
-    debugger;
-    if (
-        prevInterval?.left &&
-        prevInterval?.right &&
-        (getSideOfLine(prevInterval.right, prevInterval.left.start) == Side.right ||
-            (getSideOfLine(prevInterval.right, prevInterval.left.start) == Side.on &&
-                getSideOfLine(prevInterval.right, prevInterval.left.end) == Side.right))
-    ) {
-        console.log("Detect1", {left: prevInterval.left, right: prevInterval.right});
+    // Update the neighbor intervals
+    if (prevInterval) {
+        prevInterval.right = interval.left;
+        scanLine.insert(prevInterval);
     }
-    if (
-        nextInterval?.left &&
-        nextInterval?.right &&
-        (getSideOfLine(nextInterval.right, nextInterval.left.start) == Side.right ||
-            (getSideOfLine(nextInterval.right, nextInterval.left.start) == Side.on &&
-                getSideOfLine(nextInterval.right, nextInterval.left.end) == Side.right))
-    ) {
-        console.log("Detect2", {left: nextInterval.left, right: nextInterval.right});
+    if (nextInterval) {
+        nextInterval.left = interval.right;
+        scanLine.insert(nextInterval);
     }
+
+    // TODO: check whether prev interval or next interval swapped boundaries, and handle that properly
+
+    checkInvariants(scanLine, eventQueue);
 }

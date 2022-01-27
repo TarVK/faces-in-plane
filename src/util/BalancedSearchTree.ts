@@ -279,9 +279,43 @@ export class BSTNode<D> {
         const startSide = this.compare(start, this.item);
         const endSide = this.compare(end, this.item);
 
-        if (startSide < 0) this.left?.findRange(start, end, output);
-        if (startSide <= 0 && endSide >= 0) output.push(this.item);
-        if (endSide >= 0) this.right?.findRange(start, end, output);
+        if (startSide < 0 && endSide < 0) this.left?.findRange(start, end, output);
+        else if (startSide > 0 && endSide > 0) this.right?.findRange(start, end, output);
+        else {
+            this.left?.findRangeStart(start, output);
+            output.push(this.item);
+            this.right?.findRangeEnd(end, output);
+        }
+    }
+
+    /**
+     * Collects all the elements from the start of the subtree to the specified end
+     * @param end The element marking the end of the range
+     * @param output The output to accumulate the results in
+     */
+    public findRangeEnd(end: D | ((item: D) => number), output: D[]): void {
+        const endSide = this.compare(end, this.item);
+        if (endSide < 0) this.left?.findRangeEnd(end, output);
+        else {
+            this.left?.getAll(output);
+            output.push(this.item);
+            this.right?.findRangeEnd(end, output);
+        }
+    }
+
+    /**
+     * Collects all the elements from the specified start to the end of the subtree
+     * @param start The element marking the start of the range
+     * @param output The output to accumulate the results in
+     */
+    public findRangeStart(start: D | ((item: D) => number), output: D[]): void {
+        const startSide = this.compare(start, this.item);
+        if (startSide > 0) this.right?.findRangeStart(start, output);
+        else {
+            this.left?.findRangeStart(start, output);
+            output.push(this.item);
+            this.right?.getAll(output);
+        }
     }
 
     /**

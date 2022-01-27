@@ -16,6 +16,7 @@ import {ICounter} from "./_types/ICounter";
 import {IEvent, ILineEvent, IStopEvent} from "./_types/IEvent";
 import {IInterval} from "./_types/IInterval";
 import {IMonotonePolygonSection} from "./_types/IMonotonePolygonSection";
+import {checkInvariants, debugging} from "./debug";
 
 /**
  * Handles the polygon events at a specific point
@@ -131,7 +132,7 @@ export function handlePolygonEvents<F extends IFace<any>>(
         }
 
         for (let interval of newIntervals) addInterval(interval, scanLine, output); // Note that we don't have to check intersections, since these are start intervals
-        debugger;
+        checkInvariants(scanLine, eventQueue);
     } else {
         removeInterval(leftInterval, scanLine, eventQueue);
         removeInterval(rightInterval, scanLine, eventQueue);
@@ -157,7 +158,7 @@ export function handlePolygonEvents<F extends IFace<any>>(
         ris.topRight = newInterval.shape;
 
         addInterval(newInterval, scanLine, output, eventIdCounter, eventQueue);
-        debugger;
+        checkInvariants(scanLine, eventQueue);
     }
 }
 
