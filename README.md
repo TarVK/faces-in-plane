@@ -2,7 +2,7 @@
 
 This repository contains a typescript implementation of an algorithm I came up with to get the intersection of multiple polygons. It calculates what faces would result from adding multiple simple polygons to the same plane.
 
-A demo of the algorithm can be found at [tarvk.github.io/mCRL2-formatter/demo/build/](https://tarvk.github.io/faces-in-plane/demo/build/). There is also [a pdf](https://github.com/TarVK/faces-in-plane/blob/main/explanation/algorithm.pdf) that explains how the algorithm works.
+A demo of the algorithm can be found at [tarvk.github.io/faces-in-plane/demo/build/](https://tarvk.github.io/faces-in-plane/demo/build/). There is also [a pdf](https://github.com/TarVK/faces-in-plane/blob/main/explanation/algorithm.pdf) that explains how the algorithm works.
 
 ![Banner](./banner.png)
 
